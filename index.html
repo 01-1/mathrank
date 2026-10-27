@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mathrank</title>
+<meta name="description" content="OpenAI's AI-produced math results from fall 2026, sized by significance and colored by difficulty in a zoomable treemap.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='18' height='30' rx='3' fill='%23be4d3f'/%3E%3Crect x='21' y='1' width='10' height='17' rx='3' fill='%23e2874f'/%3E%3Crect x='21' y='20' width='10' height='11' rx='3' fill='%23f3c27d'/%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f5f2ec;--fg:#1c1a17;--muted:#69635a;--line:#ddd6c9;--card:#fffdf9;--mapbg:#e4ddd0;
+  --group:#efe9de;--ghead:#3b372f;--accent:#b04f27;--focus:#2457c5;--chip:#e9e3d7;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141317;--fg:#ebe7df;--muted:#a29c92;--line:#34323a;--card:#1d1c22;--mapbg:#0c0b0f;
+    --group:#24222a;--ghead:#d9d4cb;--accent:#e58a5c;--focus:#8fb0ff;--chip:#2a2830;color-scheme:dark}
+}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans);-webkit-text-size-adjust:100%}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+a{color:var(--accent);text-underline-offset:2px}
+header.site{padding:34px 0 6px}
+h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
+.lede{font-size:18px;margin:0 0 6px;max-width:64ch}
+.meta{color:var(--muted);font-size:14px;margin:0}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;padding:14px 0 10px;margin-top:18px;border-top:1px solid var(--line)}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctl-l{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
+.seg button{font:500 14px/1.2 var(--sans);color:var(--fg);background:none;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
+.seg button:hover{background:color-mix(in srgb,var(--card) 55%,transparent)}
+.seg button[aria-checked="true"]{background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.seg button:focus-visible,.back:focus-visible,.chk input:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.chk{font-size:14px;display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--accent);margin:0}
+
+/* zoom path */
+.crumbs{display:flex;align-items:center;gap:6px 10px;min-height:44px;padding:4px 0;flex-wrap:wrap}
+.back{font:500 14px var(--sans);color:var(--fg);background:var(--chip);border:0;border-radius:7px;padding:5px 11px;cursor:pointer}
+.back:disabled{opacity:.4;cursor:default}
+.crumbs ol{list-style:none;display:flex;flex-wrap:wrap;margin:0;padding:0;font-weight:600}
+.crumbs li+li::before{content:"›";color:var(--muted);margin:0 7px 0 3px;font-weight:400}
+.crumbs a{color:inherit;text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+.crumbs .stat{color:var(--muted);font-size:14px;margin-left:auto}
+
+/* treemap */
+.map{position:relative;height:clamp(420px,70vh,800px);background:var(--mapbg);border-radius:10px;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.layer{position:absolute;inset:0;background:var(--mapbg);transform-origin:0 0}
+.layer.anim{transition:transform .42s cubic-bezier(.22,.8,.26,1),opacity .42s ease}
+.layer.fading{opacity:0}
+.tile{position:absolute;overflow:hidden;border-radius:4px}
+.hit{cursor:pointer}
+.hit:hover{box-shadow:inset 0 0 0 2px var(--fg);z-index:1}
+.hit:focus-visible{outline:3px solid var(--focus);outline-offset:-3px;z-index:2}
+.group{background:var(--group)}
+.ghead{position:absolute;left:0;right:0;top:0;height:22px;padding:3px 8px;font:600 12px/16px var(--sans);color:var(--ghead);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ghead .n{font-weight:500;opacity:.65;margin-left:6px}
+.leaf{padding:5px 7px}
+.leaf.big{padding:8px 9px}
+.lbl{transition:opacity .25s ease}
+.layer.entering .lbl{opacity:0}
+.nm{font-weight:600;line-height:1.18;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;hyphens:auto}
+.sub{font-size:12px;line-height:16px;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm+.sub{margin-top:3px}
+.implied{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.3) 0 5px,transparent 5px 10px)}
+
+/* detail card (a zoomed-in result) */
+.detail{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--card);-webkit-user-select:text;user-select:text}
+.dband{flex:none;height:12px}
+.dscroll{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.dbody{max-width:880px;padding:22px 26px 30px}
+.kicker{color:var(--muted);font-size:13px;margin:0 0 4px}
+.detail h2{font:600 30px/1.15 var(--serif);margin:0 0 18px;outline:none}
+.scores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:6px}
+.sc{background:var(--bg);border-radius:8px;padding:10px 12px}
+.sc-k{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sc-v{font:600 28px/1.2 var(--serif);font-variant-numeric:tabular-nums}
+.meter{height:5px;background:var(--line);border-radius:3px;margin:6px 0 5px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.sc-r{font-size:12px;color:var(--muted)}
+.detail h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 4px}
+.detail p{margin:0;max-width:72ch}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.badge{display:inline-block;font-size:12px;font-weight:600;line-height:18px;padding:0 8px;border-radius:999px;margin-right:6px;vertical-align:1px}
+.links{margin:0;padding-left:18px}
+.links li{margin:2px 0}
+.sib{display:flex;justify-content:space-between;gap:12px;margin-top:24px;padding-top:12px;border-top:1px solid var(--line);font-size:14px}
+.sib a{max-width:48%}
+.sib .nx{text-align:right;margin-left:auto}
+
+/* legend */
+.below{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;padding:10px 0 2px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px}
+.legend .t{font-weight:600}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.ramp{display:inline-block;width:150px;height:10px;border-radius:3px;vertical-align:-1px;margin:0 6px}
+.hint{color:var(--muted);font-size:13px;margin:0}
+
+/* tooltip */
+.tip{position:fixed;z-index:50;max-width:300px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.4;box-shadow:0 8px 28px rgba(0,0,0,.2);pointer-events:none}
+.tip b{display:block;font-size:14px;line-height:1.25;margin-bottom:2px}
+.tip .m{color:var(--muted)}
+
+/* explanation sections */
+.how{padding:30px 0 6px;border-top:1px solid var(--line);margin-top:30px}
+.how h2,.sources h2{font:600 28px/1.2 var(--serif);margin:0 0 6px}
+.how>p{max-width:72ch;margin:0 0 18px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px 40px}
+.how h3{font-size:17px;margin:0 0 4px}
+.how .block p{margin:0 0 8px}
+table.anchors{border-collapse:collapse;width:100%;font-size:14px;margin-top:4px}
+table.anchors th,table.anchors td{padding:5px 8px 5px 0;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.anchors th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+table.anchors .num{text-align:right;font-variant-numeric:tabular-nums;padding-right:0}
+.sources{padding:30px 0 0}
+.sources ul{padding-left:18px;columns:2;column-gap:40px;margin:8px 0 0}
+.sources li{margin:0 0 6px;break-inside:avoid}
+footer.site{color:var(--muted);font-size:13px;padding:30px 0 44px}
+noscript p{background:var(--card);padding:16px;border-radius:8px}
+
+@media (max-width:700px){
+  h1{font-size:34px}
+  .lede{font-size:17px}
+  .crumbs .stat{margin-left:0;width:100%}
+  .scores{gap:6px}
+  .sc{padding:8px}
+  .sc-k{text-transform:none;letter-spacing:0;font-size:12px}
+  .sc-v{font-size:22px}
+  .facts{grid-template-columns:1fr}
+  .dbody{padding:16px}
+  .detail h2{font-size:24px}
+  .sources ul{columns:1}
+}
+@media (prefers-reduced-motion:reduce){
+  .layer.anim{transition:none}
+  .lbl{transition:none}
+}
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <h1>Mathrank</h1>
+    <p class="lede">The math results OpenAI's models produced in September and October 2026, sized by how much they would matter if they hold up.</p>
+    <p class="meta"><span id="count">62</span> results · scores as of October 26, 2026 · most have had no human review yet · <a href="#how">How the scores work</a></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="controls" id="controls">
+    <div class="ctl"><span class="ctl-l" id="color-l">Color</span>
+      <div class="seg" role="radiogroup" aria-labelledby="color-l" data-key="color">
+        <button type="button" role="radio" data-v="diff">Difficulty</button>
+        <button type="button" role="radio" data-v="lean">Lean proof</button>
+        <button type="button" role="radio" data-v="review">Review</button>
+        <button type="button" role="radio" data-v="rel">Release</button>
+      </div>
+    </div>
+    <div class="ctl"><span class="ctl-l" id="size-l">Size</span>
+      <div class="seg" role="radiogroup" aria-labelledby="size-l" data-key="size">
+        <button type="button" role="radio" data-v="impact">Impact</button>
+        <button type="button" role="radio" data-v="equal">Equal</button>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="implied"> Show results that newer ones imply</label>
+  </div>
+
+  <nav class="crumbs" aria-label="Zoom path">
+    <button type="button" class="back" id="back" aria-label="Zoom out">← Back</button>
+    <ol id="path"></ol>
+    <span class="stat" id="stat" aria-live="polite"></span>
+  </nav>
+  <div class="map" id="map"></div>
+  <div class="below">
+    <div class="legend" id="legend"></div>
+    <p class="hint">Click a tile to zoom in. Use Back, the path above, or Esc to zoom out.</p>
+  </div>
+  <noscript><p>This page needs JavaScript to draw the treemap.</p></noscript>
+
+  <section class="how" id="how">
+    <h2>How the scores work</h2>
+    <p>Each result gets two judgment calls, good to about ±0.3: how much it would matter <strong>if it's correct</strong>, and how hard it was. Most of these claims haven't been checked by people yet, so read the scores as “if this holds up.”</p>
+    <div class="grid2">
+      <div class="block">
+        <h3>Significance</h3>
+        <p>How much the result would matter. 10 is the Riemann Hypothesis.</p>
+        <table class="anchors">
+          <thead><tr><th>Human result, for scale</th><th class="num">Significance</th><th class="num">Impact</th></tr></thead>
+          <tbody id="sig-anchors"></tbody>
+        </table>
+      </div>
+      <div class="block">
+        <h3>Impact</h3>
+        <p>Significance on a multiplying scale, so results can be added up: Impact = 10<sup>(Significance − 8)/2</sup>.</p>
+        <p>A solid 8.0 result is 1×. One extra point of Significance is about 3.2× the Impact, and two extra points is 10×. <strong>Tile area is Impact.</strong></p>
+        <h3 style="margin-top:18px">Difficulty</h3>
+        <p>How hard the problem was for people: how long it held out, how much expert effort went into it, and whether it needed new ideas. Proof length doesn't count.</p>
+        <table class="anchors">
+          <thead><tr><th>Human result, for scale</th><th class="num">Difficulty</th></tr></thead>
+          <tbody id="diff-anchors"></tbody>
+        </table>
+      </div>
+      <div class="block">
+        <h3>Lean proof</h3>
+        <p>Whether the main theorem was checked by the Lean proof assistant. <em>Partial</em> means only part of the claim, or supporting lemmas. A Lean check only proves the formal statement, and nobody has yet checked those statements against the papers.</p>
+      </div>
+      <div class="block">
+        <h3>Review and implied results</h3>
+        <p><em>Review</em> is what outside experts have said so far. Most results have no review yet.</p>
+        <p>The Oct 26 local smoothing result implies two Oct 6 results (3D restriction and Kakeya). They're hidden by default so their Impact isn't counted twice.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sources" id="sources">
+    <h2>Sources</h2>
+    <ul>
+      <li><a href="https://github.com/openai/math">openai/math</a>: the catalog, papers, Lean scope notes and release history</li>
+      <li><a href="https://openai.com/index/building-scientific-understanding-with-academic-communities/">OpenAI: Working with academic communities</a> (Oct 26)</li>
+      <li><a href="https://openai.com/index/sharing-ai-progress-in-mathematics/">OpenAI: Sharing AI progress in mathematics</a> (Oct 6)</li>
+      <li><a href="https://openai.com/index/navier-stokes-solution/">OpenAI: Navier–Stokes</a> (Sep 8)</li>
+      <li><a href="https://www.quantamagazine.org/ai-proved-the-quasi-riemann-hypothesis-what-happens-now-20261019/">Quanta: AI proved the quasi-Riemann hypothesis</a></li>
+      <li><a href="https://quantamagazine.org/as-ai-closed-in-on-unique-games-proof-researchers-raced-to-beat-the-machines-20261007">Quanta: the race on Unique Games</a></li>
+      <li><a href="https://www.quantamagazine.org/update/167555/">Quanta: AI proof on critical percolation</a></li>
+      <li><a href="https://gilkalai.wordpress.com/2026/09/03/amazing-there-is-no-percolation-at-the-critical-probability-in-all-dimensions-solved-by-ai-via-a-conjecture-of-gady-kozma-and-shahaf-nitzan/">Gil Kalai on the percolation proof</a></li>
+      <li><a href="https://postcutoff.com/e/2026-10-06-free-group-factors-isomorphism-openai/">postcutoff: free group factors check</a></li>
+      <li><a href="https://postcutoff.com/e/2026-09-08-openai-navier-stokes-blowup/">postcutoff: Navier–Stokes dispute</a></li>
+      <li><a href="https://aiweekly.co/alerts/paper-flags-gap-in-openais-lean-verified-navier-stokes-proof">AI Weekly: paper flags a gap in the Navier–Stokes Lean proof</a></li>
+      <li><a href="https://thenextweb.com/news/openai-exponential-time-hypothesis-false-kakeya-yang-mills">The Next Web: the ETH review group</a></li>
+      <li><a href="https://techcrunch.com/2026/10/08/openais-math-solutions-arent-meeting-the-fields-standards-yet/">TechCrunch: release standards</a></li>
+      <li><a href="https://mathcommunity.github.io/oai-math-revised/">oai-math-revised: community notes</a></li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">Scores are opinions, not peer review. Paper links go to OpenAI's catalog as of October 26, 2026.</div>
+</footer>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------------------------------------------------------------- data */
+
+const FIELDS = [
+  ["nt", "Number theory"],
+  ["ag", "Algebraic & complex geometry"],
+  ["an", "Real & complex analysis"],
+  ["cv", "Convex & metric geometry"],
+  ["cs", "Theoretical computer science"],
+  ["ds", "Dynamics & ergodic theory"],
+  ["co", "Combinatorics"],
+  ["al", "Algebra"],
+  ["pr", "Probability & statistical mechanics"],
+  ["gt", "Group theory"],
+  ["mp", "Mathematical physics"],
+  ["oa", "Operator algebras"],
+  ["to", "Topology"],
+  ["dg", "Differential geometry"],
+  ["pde", "Partial differential equations"],
+];
+
+const RELEASES = { sep8: "Sep 8, 2026", oct6: "Oct 6, 2026", oct26: "Oct 26, 2026" };
+
+const OCT26 = ["OpenAI announcement, Oct 26", "https://openai.com/index/building-scientific-understanding-with-academic-communities/"];
+
+/* Defaults: rel "oct6", lean "none", review "none". Text supports ^{sup} and _{sub}. */
+const RESULTS = [
+  // Number theory
+  { id:"003", f:"nt", name:"Quasi-Riemann hypothesis", sig:9.6, diff:7.5, lean:"full", review:"support",
+    claim:"No Dirichlet L-function, including the Riemann zeta function, has a zero with real part above 7/8. A second paper proves the bound 11/12 a different way.",
+    why:"The first zero-free half-plane ever found, and it rules out Siegel zeros along the way. Difficulty is lower because existing tools turned out to be enough: Radziwiłł can sketch the argument in half a page.",
+    leanNote:"Covers ζ and every Dirichlet L-function at 7/8.",
+    reviewNote:"Experts largely agree it's correct. Sarnak won't call it a theorem until people have checked every detail.",
+    press:[["Quanta: AI proved the quasi-Riemann hypothesis","https://www.quantamagazine.org/ai-proved-the-quasi-riemann-hypothesis-what-happens-now-20261019/"]] },
+  { id:"004", f:"nt", name:"Hilbert's tenth problem over ℚ", sig:8.8, diff:9.2,
+    claim:"No algorithm can decide whether a polynomial equation with integer coefficients has a rational solution.",
+    why:"The answer experts expected, but it had resisted proof since the integer version was settled in 1970." },
+  { id:"016", f:"nt", name:"Zilber–Pink for abelian varieties", sig:8.8, diff:9.0,
+    claim:"The Zilber–Pink conjecture for abelian varieties over the algebraic numbers, plus the curve case in the Siegel modular threefold.",
+    why:"The full abelian case of the main conjecture on unlikely intersections, which generalizes the Manin–Mumford conjecture." },
+  { id:"002", f:"nt", name:"Birch–Swinnerton-Dyer formula in rank ≤ 1", sig:8.8, diff:8.8,
+    claim:"The full BSD formula, including finiteness of the Tate–Shafarevich group, for every elliptic curve over ℚ whose q-power Selmer group has corank 0 or 1 for some prime q.",
+    why:"The complete low-rank case of a Millennium problem. The rank part was known from Gross–Zagier and Kolyvagin; the exact formula at every prime was not." },
+  { id:"008", f:"nt", name:"Deligne–Drinfeld conjecture", sig:8.6, diff:8.3, lean:"full",
+    claim:"The Grothendieck–Teichmüller Lie algebra is freely generated by one element in each odd weight 3, 5, 7, …",
+    why:"Brown (2012) showed these elements generate a free subalgebra. This shows they generate all of it." },
+  { id:"030", f:"nt", name:"Modularity over imaginary quadratic fields", sig:8.6, diff:8.7,
+    claim:"Every elliptic curve over every imaginary quadratic field is modular.",
+    why:"Carries Wiles-style modularity past the totally real setting. Earlier work covered only some imaginary quadratic fields." },
+  { id:"029", f:"nt", name:"Artin's primitive root conjecture", sig:8.5, diff:9.0,
+    claim:"Every integer other than −1 and the perfect squares is a primitive root modulo infinitely many primes.",
+    why:"Known under GRH since 1967, and for all but at most two prime bases since 1986, but not for any single base such as 2." },
+  { id:"019", f:"nt", name:"p-adic section conjecture", sig:8.4, diff:8.5,
+    claim:"Grothendieck's section conjecture for curves over p-adic fields, and over ℚ for the modular curves X₀(N) and X₁(N).",
+    why:"A central conjecture of anabelian geometry, in its local form. The global version over number fields is still open." },
+
+  // Algebraic & complex geometry
+  { id:"034", fams:["034","033","036"], f:"ag", name:"Abundance, Iitaka and minimal models", sig:9.5, diff:9.4, lean:"partial",
+    claim:"Log abundance in every dimension (nef adjoint divisors are semiample), Campana's orbifold Iitaka conjecture, and minimal models for generalized log canonical pairs.",
+    why:"Three central conjectures of the minimal model program at once. Together they would essentially finish the program in characteristic zero.",
+    leanNote:"Only one branch of the Iitaka paper.",
+    reviewNote:"No outside review yet. Six manuscripts in this family were repaired on Oct 7." },
+  { id:"032", f:"ag", name:"Hodge conjecture for CM abelian varieties", sig:9.3, diff:9.0, lean:"full",
+    claim:"Every rational Hodge class on a complex CM abelian variety is algebraic, in every dimension. By Milne's work this gives the Tate conjecture for abelian varieties over finite fields.",
+    why:"A major case of a Millennium problem, with strong consequences in characteristic p.",
+    leanNote:"Added Oct 26 and checked against an independently written Lean statement of the Hodge conjecture.",
+    reviewNote:"No outside review yet. Three nearby Hodge papers were withdrawn on Oct 7 over a sign error; this one still stands." },
+  { id:"040", f:"ag", name:"Bloch's conjecture for surfaces", sig:8.6, diff:9.0,
+    claim:"For every smooth complex projective surface with p_{g} = 0, the Albanese map on degree-zero 0-cycles is an isomorphism.",
+    why:"A cornerstone case of the Bloch–Beilinson conjectures, open since 1975 except for special classes of surfaces." },
+  { id:"047", f:"ag", name:"Zariski cancellation fails over ℂ", sig:8.6, diff:8.8, lean:"full",
+    claim:"A complex affine 4-fold X that isn't ℂ⁴ but has X × ℂ ≅ ℂ⁵. It also disproves the Dolgachev–Weisfeiler conjecture.",
+    why:"Gupta disproved cancellation in positive characteristic in 2014. Characteristic zero was the classical case." },
+  { id:"062", f:"ag", name:"LeBrun–Salamon conjecture", sig:8.4, diff:8.6,
+    claim:"Every positive quaternion-Kähler manifold is a symmetric space, and complex contact Fano manifolds are classified.",
+    why:"Open since 1994 and known only in low dimensions." },
+
+  // Real & complex analysis
+  { id:"079", f:"an", rel:"oct26", name:"Local smoothing, Kakeya and restriction", sig:9.4, diff:9.6, lean:"full",
+    claim:"Sogge's local smoothing conjecture in every dimension. It implies the Kakeya conjecture, the Bochner–Riesz conjecture, and Fourier restriction for the sphere, paraboloid and cone across the interior of the conjectured range.",
+    why:"Local smoothing was known only in 2D (2019), and Kakeya only in 3D (Wang–Zahl, 2025). The proof uses a new auxiliary PDE.",
+    leanNote:"Every dimension, including the Kakeya and Bochner–Riesz consequences.",
+    reviewNote:"Released Oct 26 as the model wrote it. No outside review yet.",
+    press:[OCT26] },
+  { id:"077", fams:["077","078"], f:"an", implied:"079", name:"Restriction and Bochner–Riesz in 3D", sig:9.0, diff:8.9,
+    claim:"The Fourier extension conjecture for positively curved surfaces in ℝ³, and the Bochner–Riesz conjecture in ℝ³.",
+    why:"The 3D cases of two central harmonic-analysis conjectures. The Oct 26 local smoothing result covers almost all of it." },
+  { id:"074", f:"an", implied:"079", name:"Kakeya in 3D (maximal) and 4D", sig:8.7, diff:8.6,
+    claim:"The Kakeya maximal conjecture in ℝ³ and the Kakeya set conjecture in ℝ⁴.",
+    why:"Extends Wang–Zahl's 2025 theorem. The Oct 26 local smoothing result covers it." },
+  { id:"073", f:"an", name:"Falconer distance conjecture", sig:8.6, diff:8.6, lean:"full",
+    claim:"Every compact set in ℝ^{d} with dimension above d/2 determines a set of distances of positive length, in every dimension.",
+    why:"A central problem in geometric measure theory. Earlier results needed thresholds above d/2." },
+
+  // Convex & metric geometry
+  { id:"087", f:"cv", name:"Mahler conjectures", sig:8.7, diff:9.1, lean:"full",
+    claim:"Both the symmetric and the general Mahler conjecture in every dimension, with all equality cases (Hanner polytopes and simplices).",
+    why:"Open since 1939. Only the 3D symmetric case was known (2020)." },
+  { id:"091", f:"cv", name:"Log Brunn–Minkowski inequality", sig:8.3, diff:8.0, lean:"full",
+    claim:"The logarithmic Brunn–Minkowski inequality for symmetric convex bodies in every dimension, and the B-conjecture for even log-concave measures.",
+    why:"A 2012 conjecture of Böröczky, Lutwak, Yang and Zhang with many consequences in convex geometry." },
+
+  // Theoretical computer science
+  { id:"102", f:"cs", name:"Unique Games Conjecture", sig:9.2, diff:9.0, lean:"full",
+    claim:"Proves Khot's Unique Games Conjecture, plus direct NP-hardness for beating Goemans–Williamson on Max-Cut and factor 2 on Vertex Cover.",
+    why:"Pins down the best possible approximation for a huge range of problems. People were close: Minzer, Fei and Wang posted a weaker 4-to-1 result days after rumors of this proof.",
+    leanNote:"Formalized as a reduction from 3-SAT with the required gap.",
+    reviewNote:"Not yet understood by people. Dana Moshkovitz said the paper is impossible to read without AI help.",
+    press:[["Quanta: the race on Unique Games","https://quantamagazine.org/as-ai-closed-in-on-unique-games-proof-researchers-raced-to-beat-the-machines-20261007"]] },
+  { id:"378", f:"cs", rel:"oct26", name:"The Exponential Time Hypothesis is false", sig:9.2, diff:8.5, lean:"full", review:"review",
+    claim:"A deterministic, polynomial-space algorithm counts the satisfying assignments of k-CNF formulas in time 2^{n/(log n)^{1/2+o(1)}}. This refutes ETH and SETH, and gives a superlinear circuit lower bound for E^{NP}.",
+    why:"Overturns a 25-year consensus that hundreds of papers built on. The speedup over brute force is small, so many lower bounds may survive under weaker assumptions.",
+    leanNote:"Proves a slightly weaker time bound than the paper, on a concrete machine model.",
+    reviewNote:"Impagliazzo and Paturi, who proposed ETH, and Ryan Williams are running an open review. They say their role isn't an endorsement.",
+    press:[OCT26, ["The Next Web: the ETH review group","https://thenextweb.com/news/openai-exponential-time-hypothesis-false-kakeya-yang-mills"]] },
+  { id:"103", f:"cs", name:"L = BPL", sig:8.9, diff:9.2, lean:"full",
+    claim:"Randomness doesn't help log-space computation: L = RL = BPL.",
+    why:"The central derandomization question for space. The best earlier result was BPL ⊆ L^{3/2} (Saks–Zhou) plus small refinements.",
+    leanNote:"Class equality in an explicit Turing-machine model." },
+  { id:"107", f:"cs", name:"Matrix multiplication: ω ≤ 9/4", sig:8.8, diff:8.8, lean:"full",
+    claim:"Square matrices can be multiplied with O(n^{2.25+ε}) arithmetic operations over ℂ, down from about 2.371.",
+    why:"The biggest drop in the exponent in decades, below known barriers for the methods behind earlier records." },
+  { id:"142", f:"cs", name:"Deterministic polynomial factoring over 𝔽ₚ", sig:8.8, diff:9.0,
+    claim:"A deterministic polynomial-time algorithm that factors polynomials over prime fields, without assuming GRH.",
+    why:"It implies deterministic square roots mod p and a way to find a quadratic non-residue, both long open without GRH." },
+
+  // Dynamics & ergodic theory
+  { id:"143", f:"ds", name:"Hilbert's 16th problem: uniform bound", sig:9.3, diff:9.6, lean:"partial",
+    claim:"The number of limit cycles of a planar polynomial vector field is bounded by a constant that depends only on its degree. Quintic Liénard systems have at most two.",
+    why:"The second half of Hilbert's 16th problem, also Smale's 13th problem. Even degree 2 was open.",
+    leanNote:"Only the quintic Liénard case." },
+  { id:"145", f:"ds", name:"Rokhlin's multiple mixing problem", sig:8.7, diff:9.2, lean:"full",
+    claim:"Every mixing invertible measure-preserving transformation is mixing of all orders.",
+    why:"Open since 1949 and one of the best-known problems in ergodic theory." },
+  { id:"146", f:"ds", name:"Positive entropy of the standard map", sig:8.6, diff:9.0, lean:"full",
+    claim:"Chirikov's standard map on the torus has positive metric entropy for every large enough parameter.",
+    why:"Sinai's conjecture, a notorious problem in smooth dynamics." },
+
+  // Combinatorics
+  { id:"159", f:"co", name:"Erdős's conjecture on arithmetic progressions", sig:9.0, diff:9.3, lean:"full",
+    claim:"Any set of positive integers whose reciprocals add up to infinity contains arithmetic progressions of every length. Also quasi-polynomial Szemerédi bounds for every length k.",
+    why:"Contains the Green–Tao theorem on primes as a special case. Bounds this strong were known only for k = 3 (Kelley–Meka, 2023).",
+    leanNote:"The conjecture itself is formalized; the quantitative bound isn't." },
+  { id:"161", f:"co", name:"Sidorenko's conjecture disproved", sig:8.5, diff:7.5, lean:"full",
+    claim:"A bipartite graph with 35 vertices and 66 edges appears less often than it would in a random graph of the same density. It also disproves the forcing conjecture.",
+    why:"A central conjecture of extremal graph theory, but one counterexample is usually easier to find than a proof.",
+    leanNote:"The counterexample is fully checked." },
+  { id:"168", f:"co", name:"Kazhdan–Lusztig combinatorial invariance", sig:8.5, diff:8.3, lean:"full",
+    claim:"Isomorphic Bruhat intervals have the same Kazhdan–Lusztig polynomial, in any Coxeter system.",
+    why:"A conjecture from the 1980s (Lusztig, Dyer). Earlier progress, including DeepMind-assisted work in 2021, covered special cases." },
+
+  // Algebra
+  { id:"196", fams:["196","197"], f:"al", name:"Kaplansky conjectures and a non-sofic group", sig:9.0, diff:9.0, lean:"full",
+    claim:"A torsion-free group whose group algebra over 𝔽₂ has zero divisors, and a group algebra that isn't directly finite. The second group can't be sofic, and the examples also disprove Gottschalk's surjunctivity and the Determinant Conjecture.",
+    why:"Settles several famous questions at once, including whether every group is sofic.",
+    leanNote:"The zero-divisor and direct-finiteness counterexamples are formalized (the second for a group with torsion). The torsion-free and non-sofic claims aren't; non-soficity follows from a known theorem (Elek–Szabó)." },
+  { id:"202", f:"al", name:"Blockwise Alperin weight conjecture", sig:8.6, diff:8.5,
+    claim:"For every prime and every finite group, the number of Brauer characters in a block equals the number of its weights.",
+    why:"One of the main counting conjectures of modular representation theory. It had been reduced to questions about simple groups." },
+  { id:"193", f:"al", name:"Serre's positivity conjecture", sig:8.4, diff:8.8,
+    claim:"Serre's intersection multiplicity is strictly positive over every regular local ring, including the ramified mixed-characteristic case.",
+    why:"The last open part of Serre's multiplicity conjectures. Vanishing and nonnegativity were proved by Roberts, Gillet–Soulé and Gabber." },
+
+  // Probability & statistical mechanics
+  { id:"213", f:"pr", name:"No percolation at criticality", sig:9.1, diff:8.0, lean:"full", review:"earlier",
+    claim:"At the critical probability there is no infinite cluster: on ℤ³ for bond and site percolation, and on every quasi-transitive graph with p_{c} < 1 (the Benjamini–Schramm conjecture).",
+    why:"The ℤ³ case is one of the most famous problems in probability. Difficulty is lower because a 2024 reduction by Kozma and Nitzan had set it up.",
+    leanNote:"Both ℤ³ and all quasi-transitive graphs.",
+    reviewNote:"Anthropic's Claude posted a Lean-checked proof for ℤ^{d} (dimensions 3–10) on Aug 28, almost a month earlier. Gouéré says the two proofs are very similar.",
+    press:[["Quanta: AI proof on critical percolation","https://www.quantamagazine.org/update/167555/"],["Gil Kalai on the percolation proof","https://gilkalai.wordpress.com/2026/09/03/amazing-there-is-no-percolation-at-the-critical-probability-in-all-dimensions-solved-by-ai-via-a-conjecture-of-gady-kozma-and-shahaf-nitzan/"]] },
+  { id:"214", f:"pr", name:"p_{c} < p_{u} on nonamenable graphs", sig:8.6, diff:8.3, lean:"full",
+    claim:"Every nonamenable quasi-transitive graph has a phase with infinitely many infinite clusters, and mean-field behavior at criticality.",
+    why:"Benjamini and Schramm's 1996 conjecture. Hutchcroft had settled many cases." },
+  { id:"237", f:"pr", name:"Self-avoiding walk exponent 3/4", sig:8.5, diff:9.0, lean:"partial",
+    claim:"A random n-step self-avoiding walk on the honeycomb lattice has diameter n^{3/4+o(1)}.",
+    why:"Nienhuis predicted the exponent in 1982. Only the connective constant had been proved (2010).",
+    leanNote:"Only supporting estimates, not the 3/4 law." },
+
+  // Group theory
+  { id:"246", f:"gt", name:"Cannon's conjecture", sig:8.8, diff:9.0, lean:"full",
+    claim:"Every hyperbolic group whose boundary is a 2-sphere acts geometrically on hyperbolic 3-space.",
+    why:"The central open conjecture linking geometric group theory and 3-manifolds." },
+  { id:"251", f:"gt", name:"Dixmier's unitarizability problem", sig:8.5, diff:8.6, lean:"full",
+    claim:"A discrete group is amenable exactly when every uniformly bounded representation is similar to a unitary one. Ulam stability also characterizes amenability.",
+    why:"Open since 1950. It was known for groups containing free subgroups." },
+
+  // Mathematical physics
+  { id:"ym", f:"mp", rel:"oct26", name:"Yang–Mills and QCD existence", sig:9.5, diff:9.5, lean:"partial", review:"review",
+    claim:"A rigorous construction of quantum Yang–Mills theory and QCD in four dimensions, and of a grand unified completion of the Standard Model. It doesn't claim the mass gap.",
+    why:"It would be the first rigorous interacting quantum field theory in four dimensions, and half of a Millennium problem. Both scores are provisional because the proof isn't public.",
+    leanNote:"Yang–Mills existence was formalized internally, but the files aren't public.",
+    reviewNote:"A group led by David Gross is writing up the work and holding back the AI-produced materials for now.",
+    press:[OCT26] },
+  { id:"261", f:"mp", name:"Anderson localization and delocalization", sig:9.1, diff:9.4, lean:"partial",
+    claim:"In 2D, any amount of disorder gives pure point spectrum. In dimension 3 and up, weak disorder gives absolutely continuous spectrum on an interval.",
+    why:"Extended states in 3D is one of the best-known open problems in mathematical physics, and 2D localization at weak disorder was open too.",
+    leanNote:"Only where the spectrum lies, not its type." },
+  { id:"267", f:"mp", name:"Bose–Einstein condensation at positive temperature", sig:8.9, diff:9.3, lean:"partial",
+    claim:"The 3D hard-sphere Bose gas condenses at some positive temperature in the thermodynamic limit, at small density. Also Bogoliubov's depletion law at zero temperature.",
+    why:"Condensation of an interacting gas at positive temperature has been a central open problem of mathematical physics for decades.",
+    leanNote:"Only ground-state condensation." },
+  { id:"271", f:"mp", name:"Quantum Heisenberg ferromagnet", sig:8.8, diff:9.0, lean:"full",
+    claim:"Spontaneous magnetization at low temperature in every dimension d ≥ 3, plus Bloch's T^{3/2} law with its exact coefficient.",
+    why:"The antiferromagnet was handled in 1978 using reflection positivity, which the ferromagnet lacks.",
+    leanNote:"Magnetization is formalized; Bloch's law isn't." },
+  { id:"268", f:"mp", name:"Haldane gap", sig:8.7, diff:8.8,
+    claim:"The spin-1 Heisenberg antiferromagnetic chain has a spectral gap that stays positive as the chain grows.",
+    why:"Haldane's 1983 prediction, part of his Nobel-winning work, had never been proved." },
+  { id:"265", f:"mp", name:"2D area law", sig:8.6, diff:8.7,
+    claim:"Unique gapped ground states on 2D lattices satisfy an entanglement area law and have efficient tensor-network approximations.",
+    why:"Hastings proved the 1D case in 2007. Two dimensions was the main open case." },
+  { id:"263", f:"mp", name:"Ionization conjecture", sig:8.6, diff:8.6, lean:"partial",
+    claim:"A molecule with M nuclei and total nuclear charge Z binds at most Z + CM electrons, and ionization energies and atomic radii have universal bounds.",
+    why:"A well-known problem from Barry Simon's list. The best earlier bound was Z + O(Z^{5/7}).",
+    leanNote:"Only the large-ionization asymptotics." },
+  { id:"264", f:"mp", name:"Strong cosmic censorship near Kerr", sig:8.5, diff:8.7,
+    claim:"Generic vacuum initial data near two-ended rotating Kerr data have no extension with a square-integrable connection.",
+    why:"A local form of strong cosmic censorship near Kerr, with no symmetry assumed." },
+  { id:"260", f:"mp", name:"Spacetime Penrose inequality", sig:8.5, diff:8.6, lean:"partial",
+    claim:"The sharp Penrose inequality for general (not only time-symmetric) initial data in every dimension ≥ 3, in its enclosing-area form.",
+    why:"The time-symmetric case was proved in 2001 (Huisken–Ilmanen, Bray). The general case was open.",
+    leanNote:"Only supporting results, not the main inequality." },
+
+  // Operator algebras
+  { id:"287", f:"oa", name:"Free group factors are isomorphic", sig:8.9, diff:9.2, lean:"full", review:"support",
+    claim:"L(F₂) ≅ L(F₃), so all free group factors are isomorphic.",
+    why:"The best-known open problem about von Neumann algebras.",
+    leanNote:"Covers all interpolated free group factors.",
+    reviewNote:"Dimitri Shlyakhtenko (UCLA) posted a self-contained proof of a stronger statement, based on the AI proof.",
+    press:[["postcutoff: expert check","https://postcutoff.com/e/2026-10-06-free-group-factors-isomorphism-openai/"]] },
+  { id:"285", f:"oa", name:"Baum–Connes and Kadison–Kaplansky counterexamples", sig:8.9, diff:8.8,
+    claim:"The Baum–Connes conjecture without coefficients fails, and a torsion-free group has a nontrivial projection in its reduced C*-algebra.",
+    why:"Only the version with coefficients was known to fail (2002). Kadison–Kaplansky was one of the conjecture's best-known consequences." },
+  { id:"288", f:"oa", name:"Kadison similarity problem", sig:8.6, diff:8.8, lean:"full",
+    claim:"Every bounded unital homomorphism from a C*-algebra to operators on a Hilbert space is similar to a *-homomorphism.",
+    why:"Open since 1955." },
+
+  // Topology
+  { id:"305", f:"to", name:"4D disk embedding fails", sig:8.9, diff:8.8,
+    claim:"The unrestricted disk embedding conjecture fails, so the free group F₂ isn't “good.” Also a 4D Poincaré duality group that isn't the fundamental group of any aspherical 4-manifold, disproving Wall's conjecture.",
+    why:"Goes to the center of Freedman's topological surgery program in dimension 4." },
+  { id:"304", f:"to", name:"Hilbert–Smith conjecture", sig:8.8, diff:9.2,
+    claim:"A locally compact group acting faithfully on a finite-dimensional manifold must be a Lie group, in every dimension.",
+    why:"A famous extension of Hilbert's fifth problem. Only dimension 3 was known (Pardon, 2013)." },
+  { id:"320", f:"to", name:"Borel conjecture fails in dimension 4", sig:8.4, diff:8.3,
+    claim:"Closed aspherical 4-manifolds that are homotopy equivalent but not homeomorphic, with a hyperbolic fundamental group.",
+    why:"The conjecture is known in higher dimensions for these groups. Dimension 4 turns out to be an exception." },
+
+  // Differential geometry
+  { id:"346", f:"dg", name:"Singular sets of stationary varifolds", sig:8.9, diff:9.3,
+    claim:"Every stationary integral m-varifold has a singular set of dimension at most m − 1, which is sharp, so it's regular almost everywhere.",
+    why:"Whether Allard's regularity holds almost everywhere has been open since 1972. This proves something stronger." },
+  { id:"340", f:"dg", name:"Nearby Lagrangian conjecture disproved", sig:8.8, diff:8.5,
+    claim:"A closed exact Lagrangian in T*(S⁹ × S^{N−1}), diffeomorphic to the base, that isn't Hamiltonian isotopic to the zero section.",
+    why:"Arnold's conjecture was a central question of symplectic topology. The counterexample is in high dimensions." },
+  { id:"345", f:"dg", name:"Closed geodesics on spheres", sig:8.6, diff:8.8,
+    claim:"Every Riemannian metric on Sⁿ has infinitely many closed geodesics, and so does every closed 3-manifold.",
+    why:"Known for the 2-sphere since the 1990s (Bangert, Franks), open in higher dimensions." },
+  { id:"338", f:"dg", name:"Yau's uniformization conjecture", sig:8.5, diff:8.6,
+    claim:"Every complete noncompact Kähler manifold with positive bisectional curvature is biholomorphic to ℂⁿ.",
+    why:"Known only with extra volume-growth assumptions." },
+  { id:"339", f:"dg", name:"Katok's entropy rigidity conjecture", sig:8.4, diff:8.6,
+    claim:"In negative curvature and dimension 3 and up, Liouville measure maximizes entropy only for locally symmetric metrics.",
+    why:"Katok proved it for surfaces in 1982." },
+
+  // Partial differential equations
+  { id:"ns", f:"pde", rel:"sep8", name:"Navier–Stokes blowup with forcing", sig:8.9, diff:7.0, lean:"full", review:"disputed",
+    claim:"Smooth solutions of the 3D incompressible Navier–Stokes equations can blow up in finite time under a smooth external force.",
+    why:"Fits Clay's statement, which allows a force, but the unforced problem is still open. Buckmaster and Alpöge had just reached forced blowup for Euler.",
+    leanNote:"A preprint argues the formal proof doesn't match the written one.",
+    reviewNote:"Clay is reviewing slowly and still lists the problem as unsolved. There's also a credit dispute with Buckmaster and Alpöge.",
+    press:[["OpenAI announcement, Sep 8","https://openai.com/index/navier-stokes-solution/"],["AI Weekly: paper flags a Lean gap","https://aiweekly.co/alerts/paper-flags-gap-in-openais-lean-verified-navier-stokes-proof"],["postcutoff: the dispute","https://postcutoff.com/e/2026-09-08-openai-navier-stokes-blowup/"]] },
+  { id:"375", f:"pde", name:"De Giorgi's conjecture", sig:8.7, diff:9.0,
+    claim:"Monotone solutions of the Allen–Cahn equation in ℝ⁸ depend on one variable, and adding dummy variables gives every dimension up to 8. Also classifies stable solutions in ℝ⁷.",
+    why:"Proved unconditionally only in dimensions 2 and 3. Savin's 2009 result for dimensions 4–8 needed an extra assumption." },
+  { id:"362", f:"pde", name:"Relativistic Vlasov–Maxwell", sig:8.6, diff:8.7, lean:"full",
+    claim:"Large-data global smooth solutions for the 3D relativistic Vlasov–Maxwell system.",
+    why:"The main open problem in kinetic theory since Glassey and Strauss's work in 1986." },
+  { id:"366", f:"pde", name:"Planar Mumford–Shah regularity", sig:8.3, diff:8.2,
+    claim:"The discontinuity set of a planar Mumford–Shah minimizer is locally a smooth arc, a crack tip, or three arcs meeting at 120°.",
+    why:"Mumford and Shah's 1989 conjecture." },
+];
+
+const SIG_ANCHORS = [
+  ["Riemann Hypothesis", 10.0],
+  ["Fermat (Wiles), Poincaré (Perelman)", 9.6],
+  ["Geometric Langlands (2024)", 9.2],
+  ["Green–Tao, bounded prime gaps (Zhang)", 8.8],
+  ["Kakeya in 3D (Wang–Zahl), sphere packing in 8D (Viazovska)", 8.6],
+  ["Sensitivity conjecture (Huang)", 7.8],
+];
+const DIFF_ANCHORS = [
+  ["Fermat (Wiles), Poincaré (Perelman)", 9.8],
+  ["Kakeya in 3D (Wang–Zahl)", 9.2],
+  ["Bounded prime gaps (Zhang)", 8.5],
+  ["Sensitivity conjecture (Huang)", 6.5],
+];
+
+/* Paper links from OpenAI's catalog, keyed by family number (filled in at build time). */
+const LINKS = {"002":[{"t":"Exact Birch–Swinnerton-Dyer Formula from Low Selmer Corank","u":"https://github.com/openai/math/blob/main/preprints/Exact-Birch-Swinnerton-Dyer-Formula-from-Low-Selmer-Corank-October-7-2026/exact-bsd-low-selmer-corank.pdf"},{"t":"The Selmer converse for elliptic curves at every prime","u":"https://github.com/openai/math/blob/main/preprints/The-Selmer-converse-for-elliptic-curves-at-every-prime-October-7-2026/main.pdf"},{"t":"The two-primary Birch–Swinnerton-Dyer formula in Selmer corank at most one","u":"https://github.com/openai/math/blob/main/preprints/The-two-primary-Birch-Swinnerton-Dyer-formula-in-Selmer-corank-at-most-one-October-6-2026/paper.pdf"}],"003":[{"t":"The Quasi-Riemann Hypothesis: A Zero-Free Half-Plane Re s > 7/8","u":"https://github.com/openai/math/blob/main/preprints/The-Quasi-Riemann-Hypothesis-September-30-2026/paper.pdf"},{"t":"The Quasi-Riemann Hypothesis (alternate 11/12 proof)","u":"https://github.com/openai/math/blob/main/preprints/The-Quasi-Riemann-Hypothesis-October-5-2026/paper2.pdf"},{"t":"Uniform exclusion of Landau–Siegel zeros","u":"https://github.com/openai/math/blob/main/preprints/Uniform-exclusion-of-Landau-Siegel-zeros-October-1-2026/paper.pdf"}],"004":[{"t":"Hilbert’s tenth over ℚ","u":"https://github.com/openai/math/blob/main/preprints/Hilberts-tenth-problem-over-the-rational-numbers-October-6-2026/main.pdf"},{"t":"Pointwise 2-converse with rational two-torsion","u":"https://github.com/openai/math/blob/main/preprints/A-pointwise-2-converse-for-elliptic-curves-with-rational-two-torsion-October-7-2026/paper.pdf"}],"008":[{"t":"The Deligne-Drinfeld conjecture","u":"https://github.com/openai/math/blob/main/preprints/The-Deligne-Drinfeld-conjecture-September-23-2026/paper.pdf"}],"016":[{"t":"Abelian Zilber–Pink","u":"https://github.com/openai/math/blob/main/preprints/The-Abelian-Zilber-Pink-Conjecture-September-24-2026/paper.pdf"},{"t":"E × CM component","u":"https://github.com/openai/math/blob/main/preprints/The-E-times-CM-Component-of-Zilber-Pink-for-Curves-in-A2-September-24-2026/paper.pdf"},{"t":"Quaternionic division points","u":"https://github.com/openai/math/blob/main/preprints/Quaternionic-Division-Points-on-Curves-in-the-Siegel-Threefold-September-24-2026/paper.pdf"},{"t":"Elliptic squares","u":"https://github.com/openai/math/blob/main/preprints/Elliptic-Squares-and-Zilber-Pink-for-Curves-in-A2-September-24-2026/paper.pdf"}],"019":[{"t":"Prescribed exterior sheet","u":"https://github.com/openai/math/blob/main/preprints/Etale-covers-with-a-prescribed-exterior-sheet-September-24-2026/main.pdf"},{"t":"p-adic section conjecture","u":"https://github.com/openai/math/blob/main/preprints/The-p-adic-section-conjecture-October-6-2026/main.pdf"}],"029":[{"t":"Primitive roots for every admissible integer base","u":"https://github.com/openai/math/blob/main/preprints/Primitive-roots-for-every-admissible-integer-base-October-4-2026/primitive-roots-all-integer-bases.pdf"},{"t":"Simultaneous primitive roots: a conditional lower bound for prime bases","u":"https://github.com/openai/math/blob/main/preprints/Simultaneous-primitive-roots-a-conditional-lower-bound-for-prime-bases-October-4-2026/simultaneous-primitive-roots-conditional-lower-bound-prime-bases.pdf"}],"030":[{"t":"Modularity of elliptic curves over imaginary quadratic fields","u":"https://github.com/openai/math/blob/main/preprints/Modularity-of-elliptic-curves-over-imaginary-quadratic-fields-October-4-2026/paper.pdf"}],"032":[{"t":"The rational Hodge conjecture for CM abelian varieties","u":"https://github.com/openai/math/blob/main/preprints/The-rational-Hodge-conjecture-for-CM-abelian-varieties-October-6-2026/paper.pdf"},{"t":"Algebraic Kuga–Satake correspondences and Hodge conjectures on a K3 quadratic locus","u":"https://github.com/openai/math/blob/main/preprints/Algebraic-Kuga-Satake-correspondences-and-Hodge-conjectures-on-a-K3-quadratic-locus-September-30-2026/paper.pdf"},{"t":"Weil classes and Hodge classes on abelian powers","u":"https://github.com/openai/math/blob/main/preprints/Weil-classes-and-Hodge-classes-on-abelian-powers-October-6-2026/paper.pdf"},{"t":"Abelian covers, Gale correspondences, and the Hodge conjecture for powers","u":"https://github.com/openai/math/blob/main/preprints/Abelian-covers-Gale-correspondences-and-the-Hodge-conjecture-for-powers-October-6-2026/paper.pdf"},{"t":"A Conditional Reduction for Algebraic Kuga–Satake Correspondences","u":"https://github.com/openai/math/blob/main/preprints/A-Conditional-Reduction-for-Algebraic-Kuga-Satake-Correspondences-September-10-2026/paper.pdf"}],"033":[{"t":"Orbifold and logarithmic subadditivity","u":"https://github.com/openai/math/blob/main/preprints/Orbifold-and-logarithmic-Iitaka-subadditivity-September-26-2026/paper.pdf"},{"t":"Whole-fiber variation","u":"https://github.com/openai/math/blob/main/preprints/Logarithmic-Kodaira-dimension-and-whole-fiber-variation-September-26-2026/paper.pdf"},{"t":"Reverse inequality and additivity","u":"https://github.com/openai/math/blob/main/preprints/The-reverse-logarithmic-Kodaira-inequality-and-additivity-September-26-2026/paper.pdf"},{"t":"Projective Hodge lines","u":"https://github.com/openai/math/blob/main/preprints/Projective-Hodge-lines-and-ordinary-Iitaka-subadditivity-September-27-2026/paper.pdf"},{"t":"Kähler b-semiampleness","u":"https://github.com/openai/math/blob/main/preprints/B-semiampleness-for-compact-log-smooth-Kahler-fibrations-September-10-2026/paper.pdf"}],"034":[{"t":"Log abundance for compact Kähler spaces","u":"https://github.com/openai/math/blob/main/preprints/Log-abundance-for-compact-Kahler-spaces-under-logarithmic-Iitaka-subadditivity-October-6-2026/main.pdf"},{"t":"Uniform indices for semi-log-canonical log Calabi–Yau pairs","u":"https://github.com/openai/math/blob/main/preprints/Uniform-indices-for-semi-log-canonical-log-Calabi-Yau-pairs-October-5-2026/uniform-slc-index.pdf"},{"t":"Conditional Kähler good minimal models","u":"https://github.com/openai/math/blob/main/preprints/Conditional-good-minimal-models-for-compact-Kahler-fourfolds-October-6-2026/paper.pdf"},{"t":"Log abundance in characteristic zero","u":"https://github.com/openai/math/blob/main/preprints/Log-abundance-in-characteristic-zero-September-24-2026/paper.pdf"},{"t":"Minimal metrics and interior injectivity","u":"https://github.com/openai/math/blob/main/preprints/Minimal-metrics-and-interior-injectivity-for-nef-adjoints-September-27-2026/paper.pdf"},{"t":"Fourfold nonvanishing","u":"https://github.com/openai/math/blob/main/preprints/Fourfold-nonvanishing-by-minimal-metrics-and-moving-jets-September-27-2026/paper.pdf"},{"t":"Lifting sections from reduced support","u":"https://github.com/openai/math/blob/main/preprints/Lifting-sections-from-the-reduced-support-of-an-adjoint-September-27-2026/paper.pdf"},{"t":"Schnell fiber spaces","u":"https://github.com/openai/math/blob/main/preprints/Schnell-fiber-spaces-and-good-canonical-models-September-24-2026/paper.pdf"},{"t":"Uniform log Iitaka fibrations","u":"https://github.com/openai/math/blob/main/preprints/Uniform-log-Iitaka-fibrations-and-bounded-moduli-denominators-October-4-2026/uniform-log-iitaka.pdf"},{"t":"Uniform pluricanonical Iitaka fibrations","u":"https://github.com/openai/math/blob/main/preprints/Uniform-Pluricanonical-Iitaka-Fibrations-October-3-2026/paper.pdf"},{"t":"Log Calabi–Yau fibrations","u":"https://github.com/openai/math/blob/main/preprints/Relative-denominators-and-effective-systems-for-log-Calabi-Yau-fibrations-September-27-2026/paper.pdf"},{"t":"Arithmetic Stein-degree bounds","u":"https://github.com/openai/math/blob/main/preprints/Arithmetic-Stein-degree-bounds-for-log-Calabi-Yau-pairs-September-25-2026/paper.pdf"},{"t":"Log Iitaka fibrations for fourfolds","u":"https://github.com/openai/math/blob/main/preprints/Uniform-effective-log-Iitaka-fibrations-for-fourfolds-September-26-2026/paper.pdf"},{"t":"Compact Kähler fourfolds after nonvanishing","u":"https://github.com/openai/math/blob/main/preprints/Abundance-after-nonvanishing-for-compact-Kahler-fourfolds-September-27-2026/paper.pdf"}],"036":[{"t":"Compact Kähler numerical semiampleness","u":"https://github.com/openai/math/blob/main/preprints/Numerical-semiampleness-of-nef-adjoint-classes-on-compact-Kahler-manifolds-October-6-2026/numerical-generalized-abundance.pdf"},{"t":"Projective numerical semiampleness","u":"https://github.com/openai/math/blob/main/preprints/Numerical-Semiampleness-of-Nef-Adjoint-Divisors-October-3-2026/paper.pdf"},{"t":"Generalized log canonical Q-pairs","u":"https://github.com/openai/math/blob/main/preprints/Minimal-models-and-Mori-fibre-spaces-for-generalized-log-canonical-Q-pairs-September-24-2026/paper.pdf"},{"t":"Numerical dimension one","u":"https://github.com/openai/math/blob/main/preprints/Minimal-models-in-numerical-dimension-one-September-24-2026/paper.pdf"}],"040":[{"t":"Bloch’s conjecture for surfaces with p_g = 0","u":"https://github.com/openai/math/blob/main/preprints/Blochs-Conjecture-for-Surfaces-with-pg-equals-q-equals-0-September-24-2026/paper.pdf"}],"047":[{"t":"An explicit failure of complex affine-space cancellation","u":"https://github.com/openai/math/blob/main/preprints/An-explicit-failure-of-complex-affine-space-cancellation-September-23-2026/paper.pdf"}],"062":[{"t":"Contact Fano manifolds and the LeBrun–Salamon conjecture","u":"https://github.com/openai/math/blob/main/preprints/Contact-Fano-manifolds-and-the-LeBrun-Salamon-conjecture-September-23-2026/paper.pdf"}],"073":[{"t":"The Falconer distance conjecture in all dimensions","u":"https://github.com/openai/math/blob/main/preprints/The-Falconer-distance-conjecture-in-all-dimensions-September-23-2026/paper.pdf"}],"074":[{"t":"3D Kakeya maximal conjecture","u":"https://github.com/openai/math/blob/main/preprints/The-Kakeya-maximal-conjecture-in-three-dimensions-September-23-2026/paper.pdf"},{"t":"4D Kakeya Hausdorff dimension","u":"https://github.com/openai/math/blob/main/preprints/Every-four-dimensional-Kakeya-set-has-full-Hausdorff-dimension-September-24-2026/paper.pdf"}],"077":[{"t":"Sphere restriction","u":"https://github.com/openai/math/blob/main/preprints/Elliptic-capacity-propagation-and-Fourier-restriction-to-the-sphere-September-24-2026/Elliptic-capacity-propagation-and-Fourier-restriction-to-the-sphere-September-24-2026.pdf"},{"t":"Diagonal Fourier extension","u":"https://github.com/openai/math/blob/main/preprints/Diagonal-Fourier-extension-for-positively-curved-surfaces-in-three-dimensions-September-24-2026/Diagonal-Fourier-extension-for-positively-curved-surfaces-in-three-dimensions-September-24-2026.pdf"}],"078":[{"t":"Bochner–Riesz multipliers in three dimensions","u":"https://github.com/openai/math/blob/main/preprints/Bochner-Riesz-Multipliers-in-Three-Dimensions-September-24-2026/Bochner-Riesz-Multipliers-in-Three-Dimensions-September-24-2026.pdf"}],"079":[{"t":"Local smoothing for the Euclidean wave equation","u":"https://github.com/openai/math/blob/main/preprints/Local-smoothing-for-the-Euclidean-wave-equation-October-25-2026/paper.pdf"},{"t":"Critical local smoothing for the three-dimensional wave equation","u":"https://github.com/openai/math/blob/main/preprints/Critical-local-smoothing-for-the-three-dimensional-wave-equation-September-24-2026/paper.pdf"}],"087":[{"t":"Symmetric Mahler equality cases","u":"https://github.com/openai/math/blob/main/preprints/The-symmetric-Mahler-conjecture-and-its-equality-cases-September-22-2026/paper.pdf"},{"t":"General Mahler conjecture","u":"https://github.com/openai/math/blob/main/preprints/The-Mahler-Conjecture-for-General-Convex-Bodies-September-22-2026/paper.pdf"},{"t":"Symplectic balls in polar products","u":"https://github.com/openai/math/blob/main/preprints/Symplectic-Balls-in-Symmetric-Polar-Products-September-22-2026/paper.pdf"}],"091":[{"t":"The logarithmic Brunn–Minkowski conjecture","u":"https://github.com/openai/math/blob/main/preprints/The-logarithmic-Brunn-Minkowski-conjecture-September-23-2026/paper.pdf"}],"102":[{"t":"Unique Games theorem","u":"https://github.com/openai/math/blob/main/preprints/The-Unique-Games-Theorem-September-23-2026/paper.pdf"},{"t":"Optimal Max-Cut hardness","u":"https://github.com/openai/math/blob/main/preprints/A-Direct-Proof-of-Optimal-Max-Cut-Hardness-September-23-2026/paper.pdf"},{"t":"Factor-two Vertex Cover hardness","u":"https://github.com/openai/math/blob/main/preprints/The-Factor-Two-Hardness-Threshold-for-Vertex-Cover-September-23-2026/paper.pdf"},{"t":"Constant-factor Min-UnCut hardness","u":"https://github.com/openai/math/blob/main/preprints/Constant-factor-hardness-of-Min-UnCut-September-23-2026/paper.pdf"},{"t":"Directed feedback vertex set hardness","u":"https://github.com/openai/math/blob/main/preprints/Constant-factor-hardness-of-directed-feedback-vertex-set-September-23-2026/paper.pdf"}],"103":[{"t":"Exact derandomization of logarithmic space: L = RL = BPL","u":"https://github.com/openai/math/blob/main/preprints/Exact-Derandomization-of-Logarithmic-Space-L-equals-RL-equals-BPL-September-23-2026/paper.pdf"}],"107":[{"t":"Exponent at most 9/4 over ℂ","u":"https://github.com/openai/math/blob/main/preprints/Matrix-Multiplication-Nine-Fourths-October-2-2026/paper.pdf"},{"t":"Earlier complex and rectangular bounds","u":"https://github.com/openai/math/blob/main/preprints/Complex-Matrix-Multiplication-Below-2.258-and-Rectangular-Bounds-September-24-2026/Complex-Matrix-Multiplication-Below-2.258-and-Rectangular-Bounds-September-24-2026.pdf"},{"t":"Staggered extraction over every field","u":"https://github.com/openai/math/blob/main/preprints/Staggered-extraction-for-exact-matrix-multiplication-over-every-field-September-24-2026/Staggered-extraction-for-exact-matrix-multiplication-over-every-field-September-24-2026.pdf"}],"142":[{"t":"Deterministic Polynomial Factorization over Prime Fields","u":"https://github.com/openai/math/blob/main/preprints/Deterministic-Polynomial-Factorization-over-Prime-Fields-October-4-2026/Deterministic-Polynomial-Factorization-over-Prime-Fields.pdf"}],"143":[{"t":"Uniform limit-cycle bounds","u":"https://github.com/openai/math/blob/main/preprints/uniform-bounds-for-planar-polynomial-limit-cycles-September-24-2026/uniform-bounds-for-planar-polynomial-limit-cycles-September-24-2026.pdf"},{"t":"Quintic Liénard limit cycles","u":"https://github.com/openai/math/blob/main/preprints/two-limit-cycles-for-quintic-lienard-systems-September-24-2026/two-limit-cycles-for-quintic-lienard-systems-September-24-2026.pdf"}],"145":[{"t":"Rokhlin's multiple-mixing problem for one transformation","u":"https://github.com/openai/math/blob/main/preprints/Rokhlins-multiple-mixing-problem-for-one-transformation-September-23-2026/paper.pdf"}],"146":[{"t":"Positive Metric Entropy for the Standard Map at Large Parameters","u":"https://github.com/openai/math/blob/main/preprints/Positive-Metric-Entropy-for-the-Standard-Map-at-Large-Parameters-September-23-2026/paper.pdf"}],"159":[{"t":"Quasipolynomial Bounds for Arithmetic Progressions","u":"https://github.com/openai/math/blob/main/preprints/Quasipolynomial-Bounds-for-Arithmetic-Progressions-September-23-2026/paper.pdf"}],"161":[{"t":"A counterexample to Sidorenko's conjecture","u":"https://github.com/openai/math/blob/main/preprints/A-counterexample-to-Sidorenkos-conjecture-September-23-2026/paper.pdf"}],"168":[{"t":"Combinatorial invariance of Kazhdan–Lusztig polynomials","u":"https://github.com/openai/math/blob/main/preprints/Combinatorial-Invariance-of-Kazhdan-Lusztig-Polynomials-September-24-2026/paper.pdf"}],"193":[{"t":"Positivity of Serre's Intersection Multiplicity","u":"https://github.com/openai/math/blob/main/preprints/Positivity-of-Serres-Intersection-Multiplicity-September-23-2026/paper.pdf"}],"196":[{"t":"A Torsion-Free Group Algebra with Zero Divisors","u":"https://github.com/openai/math/blob/main/preprints/A-Torsion-Free-Group-Algebra-with-Zero-Divisors-September-23-2026/paper.pdf"}],"197":[{"t":"Torsion-free direct-finiteness counterexample","u":"https://github.com/openai/math/blob/main/preprints/A-Torsion-Free-Group-Algebra-That-Is-Not-Directly-Finite-October-4-2026/direct-finiteness.pdf"},{"t":"Characteristic two","u":"https://github.com/openai/math/blob/main/preprints/A-Counterexample-to-Kaplanskys-Direct-Finiteness-Conjecture-in-Characteristic-Two-September-23-2026/paper.pdf"},{"t":"Determinant","u":"https://github.com/openai/math/blob/main/preprints/A-Counterexample-to-the-Group-Ring-Determinant-Conjecture-September-23-2026/paper.pdf"},{"t":"Odd characteristic","u":"https://github.com/openai/math/blob/main/preprints/A-Counterexample-to-Kaplanskys-Direct-Finiteness-Conjecture-in-Odd-Characteristic-September-26-2026/paper.pdf"}],"202":[{"t":"The Blockwise Alperin Weight Conjecture","u":"https://github.com/openai/math/blob/main/preprints/The-Blockwise-Alperin-Weight-Conjecture-September-23-2026/paper.pdf"}],"213":[{"t":"Cubic-lattice bond and site percolation","u":"https://github.com/openai/math/blob/main/preprints/Critical-bond-and-site-percolation-on-the-cubic-lattice-September-24-2026/paper.pdf"},{"t":"Quasi-transitive graphs at criticality","u":"https://github.com/openai/math/blob/main/preprints/No-percolation-at-criticality-on-quasi-transitive-graphs-September-24-2026/paper.pdf"}],"214":[{"t":"Nonuniqueness of percolation on nonamenable quasi-transitive graphs","u":"https://github.com/openai/math/blob/main/preprints/Nonuniqueness-of-percolation-on-nonamenable-quasi-transitive-graphs-September-24-2026/paper.pdf"}],"237":[{"t":"Radial transfer and polygon length laws","u":"https://github.com/openai/math/blob/main/preprints/Radial-transfer-estimates-and-polygon-length-laws-for-honeycomb-walks-September-26-2026/main.pdf"},{"t":"Chords with prescribed boundary endpoints","u":"https://github.com/openai/math/blob/main/preprints/Critical-honeycomb-chords-with-prescribed-boundary-endpoints-September-26-2026/main.pdf"},{"t":"Cylinder loop weights and planar nesting","u":"https://github.com/openai/math/blob/main/preprints/Cylinder-loop-weights-and-planar-nesting-September-26-2026/main.pdf"},{"t":"Mass and covering exponents for fixed-length walks","u":"https://github.com/openai/math/blob/main/preprints/Mass-and-covering-exponents-for-fixed-length-honeycomb-walks-September-26-2026/main.pdf"},{"t":"Signed cylinder propagation","u":"https://github.com/openai/math/blob/main/preprints/Signed-cylinder-propagation-and-marked-polygons-on-the-honeycomb-lattice-September-26-2026/main.pdf"},{"t":"Logarithmic bridge-length windows","u":"https://github.com/openai/math/blob/main/preprints/Cylinder-amplitudes-and-logarithmic-bridge-length-windows-on-the-honeycomb-lattice-September-26-2026/main.pdf"},{"t":"Marked polygons and one-arc bounds","u":"https://github.com/openai/math/blob/main/preprints/Marked-polygon-correlations-and-one-arc-bounds-September-26-2026/main.pdf"},{"t":"Disk transfer and confined bridge mass","u":"https://github.com/openai/math/blob/main/preprints/Disk-transfer-representations-and-confined-bridge-mass-September-26-2026/main.pdf"},{"t":"Polynomial vacuum representations","u":"https://github.com/openai/math/blob/main/preprints/Polynomial-vacuum-representations-and-bridge-mass-for-honeycomb-walks-September-26-2026/main.pdf"},{"t":"Renewal and changes of law","u":"https://github.com/openai/math/blob/main/preprints/Renewal-and-changes-of-law-for-critical-honeycomb-walks-September-26-2026/main.pdf"},{"t":"Critical strip-crossing mass","u":"https://github.com/openai/math/blob/main/preprints/Critical-strip-crossing-mass-on-the-honeycomb-lattice-September-26-2026/main.pdf"},{"t":"Finite bridge moments","u":"https://github.com/openai/math/blob/main/preprints/Uniform-marked-polygon-estimates-and-sharp-finite-bridge-moments-September-26-2026/main.pdf"},{"t":"Cap-selected amplitudes and triangle chords","u":"https://github.com/openai/math/blob/main/preprints/Cap-selected-amplitudes-and-triangle-chords-for-honeycomb-walks-September-26-2026/main.pdf"}],"246":[{"t":"A Modulus Proof of Cannon’s Conjecture","u":"https://github.com/openai/math/blob/main/preprints/A-Modulus-Proof-of-Cannons-Conjecture-September-23-2026/paper.pdf"}],"251":[{"t":"Unitarizability implies amenability for discrete groups","u":"https://github.com/openai/math/blob/main/preprints/Unitarizability-Implies-Amenability-for-Countable-Groups-September-23-2026/paper.pdf"},{"t":"Strong Ulam Stability Characterizes Amenability","u":"https://github.com/openai/math/blob/main/preprints/Strong-Ulam-Stability-Characterizes-Amenability-October-5-2026/strong-ulam-stability.pdf"}],"260":[{"t":"Three-dimensional charged inequality","u":"https://github.com/openai/math/blob/main/preprints/The-spacetime-Penrose-inequality-with-charge-and-original-data-rigidity-October-5-2026/paper.pdf"},{"t":"Higher-dimensional charged reduction","u":"https://github.com/openai/math/blob/main/preprints/A-Charged-Reduction-of-the-Spacetime-Penrose-Inequality-in-Spatial-Dimensions-at-Least-Four-October-5-2026/paper.pdf"},{"t":"Enclosing area, charge, and rigidity","u":"https://github.com/openai/math/blob/main/preprints/Spacetime-Penrose-inequalities-enclosing-area-charge-and-rigidity-October-5-2026/paper.pdf"},{"t":"Kerr–Newman inequality","u":"https://github.com/openai/math/blob/main/preprints/The-Kerr-Newman-Penrose-Inequality-for-Axisymmetric-Electrovacuum-Exteriors-October-5-2026/paper.pdf"},{"t":"Electromagnetic tails","u":"https://github.com/openai/math/blob/main/preprints/Electromagnetic-tails-and-the-Kerr-Newman-Penrose-inequality-October-5-2026/paper.pdf"},{"t":"Nonmaximal anti-de Sitter inequality","u":"https://github.com/openai/math/blob/main/preprints/The-nonmaximal-anti-de-Sitter-Penrose-Inequality-and-original-data-rigidity-October-5-2026/paper.pdf"},{"t":"Maximal asymptotically hyperbolic inequality","u":"https://github.com/openai/math/blob/main/preprints/The-Penrose-inequality-for-maximal-asymptotically-hyperbolic-initial-data-October-5-2026/paper.pdf"},{"t":"Local Schwarzschild–anti-de Sitter inequality","u":"https://github.com/openai/math/blob/main/preprints/A-local-Penrose-inequality-for-conformal-perturbations-of-Schwarzschild-anti-de-Sitter-data-October-5-2026/paper.pdf"},{"t":"Numerical spacetime","u":"https://github.com/openai/math/blob/main/preprints/The-spacetime-Penrose-inequality-and-enclosing-area-September-27-2026/paper.pdf"},{"t":"Riemannian endpoint","u":"https://github.com/openai/math/blob/main/preprints/Conformal-flow-and-the-Riemannian-Penrose-inequality-with-minimizing-frontiers-September-27-2026/paper.pdf"},{"t":"Equality and rigidity","u":"https://github.com/openai/math/blob/main/preprints/Equality-and-rigidity-in-the-spacetime-Penrose-inequality-September-27-2026/paper.pdf"},{"t":"Boundary graphs","u":"https://github.com/openai/math/blob/main/preprints/Boundary-graph-deformations-for-the-spacetime-Penrose-inequality-September-27-2026/paper.pdf"},{"t":"Bondi-CKS","u":"https://github.com/openai/math/blob/main/preprints/Area-controlled-end-replacement-and-the-Bondi-Penrose-inequality-in-the-CKS-class-September-27-2026/paper.pdf"}],"261":[{"t":"Absolutely continuous spectrum","u":"https://github.com/openai/math/blob/main/preprints/Absolutely-Continuous-Spectrum-for-Weak-Disorder-Anderson-Models-in-Dimensions-at-Least-Three-September-23-2026/paper.pdf"},{"t":"Pure-point spectrum","u":"https://github.com/openai/math/blob/main/preprints/Pure-Point-Spectrum-for-the-Two-Dimensional-Anderson-Model-at-Every-Positive-Disorder-September-23-2026/paper.pdf"}],"263":[{"t":"Uniform excess charge and outer radius","u":"https://github.com/openai/math/blob/main/preprints/Uniform-excess-charge-for-Coulomb-molecules-and-the-outer-radius-of-neutral-atoms-September-24-2026/paper.pdf"},{"t":"Generalized ionization energies","u":"https://github.com/openai/math/blob/main/preprints/Generalized-ionization-energies-for-full-Coulomb-atoms-September-24-2026/paper.pdf"},{"t":"Generalized outer-electron radii","u":"https://github.com/openai/math/blob/main/preprints/Generalized-outer-electron-radii-of-neutral-Coulomb-atoms-September-24-2026/paper.pdf"}],"264":[{"t":"Future inextendibility, L² connection","u":"https://github.com/openai/math/blob/main/preprints/Generic-Future-Inextendibility-with-Square-Integrable-Connection-Near-a-Fixed-Kerr-Spacetime-September-23-2026/paper.pdf"},{"t":"C¹ future inextendibility","u":"https://github.com/openai/math/blob/main/preprints/Generic-C1-Future-Inextendibility-Near-Rotating-Subextremal-Kerr-Spacetimes-September-23-2026/paper.pdf"},{"t":"C² future inextendibility","u":"https://github.com/openai/math/blob/main/preprints/Quantitative-Near-Kerr-Evolution-and-Generic-C2-Future-Inextendibility-September-23-2026/paper.pdf"}],"265":[{"t":"Two-dimensional area law","u":"https://github.com/openai/math/blob/main/preprints/A-two-dimensional-area-law-from-a-global-spectral-gap-September-24-2026/paper.pdf"},{"t":"Polynomial PEPS approximation","u":"https://github.com/openai/math/blob/main/preprints/Polynomial-PEPS-approximation-of-gapped-square-grid-ground-states-September-24-2026/paper.pdf"}],"267":[{"t":"Bose–Einstein condensation at positive temperature in the dilute hard-sphere gas","u":"https://github.com/openai/math/blob/main/preprints/Bose-Einstein-condensation-at-positive-temperature-in-the-dilute-hard-sphere-gas-October-5-2026/positive-temperature-hard-spheres.pdf"},{"t":"Quantum Depletion and Momentum Distribution in the Dilute Hard-Sphere Bose Gas","u":"https://github.com/openai/math/blob/main/preprints/Quantum-Depletion-and-Momentum-Distribution-in-the-Dilute-Hard-Sphere-Bose-Gas-October-5-2026/Quantum-Depletion-in-the-Dilute-Hard-Sphere-Bose-Gas.pdf"},{"t":"Quantum Depletion for Fixed Bounded Repulsive Potentials","u":"https://github.com/openai/math/blob/main/preprints/Quantum-Depletion-for-Fixed-Bounded-Repulsive-Potentials-October-5-2026/fixed-repulsion-quantum-depletion.pdf"},{"t":"A density-uniform condensate bound for dilute Bose gases","u":"https://github.com/openai/math/blob/main/preprints/A-density-uniform-condensate-bound-for-dilute-Bose-gases-September-27-2026/paper.pdf"},{"t":"Ground-state condensation in the dilute hard-sphere gas","u":"https://github.com/openai/math/blob/main/preprints/Ground-state-condensation-in-the-dilute-hard-sphere-gas-September-24-2026/paper.pdf"}],"268":[{"t":"Periodic Haldane gap","u":"https://github.com/openai/math/blob/main/preprints/The-periodic-spin-one-Haldane-gap-September-24-2026/paper.pdf"},{"t":"Boundary-field gap","u":"https://github.com/openai/math/blob/main/preprints/A-boundary-field-gap-for-the-spin-one-Heisenberg-chain-September-24-2026/paper.pdf"}],"271":[{"t":"Bloch's Law for Finite-Range Heisenberg Ferromagnets in Three Dimensions","u":"https://github.com/openai/math/blob/main/preprints/Blochs-Law-for-Finite-Range-Heisenberg-Ferromagnets-in-Three-Dimensions-October-5-2026/bloch-law-heisenberg.pdf"},{"t":"The first lattice correction to Bloch's law","u":"https://github.com/openai/math/blob/main/preprints/The-first-lattice-correction-to-Blochs-law-October-5-2026/first-lattice-correction-bloch-law.pdf"},{"t":"The spherical magnetization law for the three-dimensional quantum Heisenberg ferromagnet","u":"https://github.com/openai/math/blob/main/preprints/The-spherical-magnetization-law-for-the-three-dimensional-quantum-Heisenberg-ferromagnet-October-5-2026/spherical-magnetization.pdf"},{"t":"Spontaneous magnetization in the quantum Heisenberg ferromagnet","u":"https://github.com/openai/math/blob/main/preprints/Spontaneous-magnetization-in-the-quantum-Heisenberg-ferromagnet-September-24-2026/paper.pdf"}],"285":[{"t":"Baum–Connes injectivity","u":"https://github.com/openai/math/blob/main/preprints/A-Torsion-Free-Counterexample-to-Reduced-Baum-Connes-Injectivity-September-23-2026/paper.pdf"},{"t":"Kadison–Kaplansky counterexample","u":"https://github.com/openai/math/blob/main/preprints/A-Torsion-Free-Counterexample-to-the-Kadison-Kaplansky-Projection-Conjecture-September-23-2026/paper.pdf"},{"t":"Irrational-trace Baum–Connes counterexample","u":"https://github.com/openai/math/blob/main/preprints/An-Irrational-Trace-Counterexample-to-Reduced-Baum-Connes-September-23-2026/paper.pdf"}],"287":[{"t":"An isomorphism of the free group factors","u":"https://github.com/openai/math/blob/main/preprints/An-isomorphism-of-the-free-group-factors-September-23-2026/An-isomorphism-of-the-free-group-factors-September-23-2026.pdf"}],"288":[{"t":"Kadison's similarity theorem through uniform derivation estimates","u":"https://github.com/openai/math/blob/main/preprints/Kadisons-similarity-theorem-through-uniform-derivation-estimates-September-23-2026/paper.pdf"}],"304":[{"t":"The Hilbert–Smith conjecture in every finite dimension","u":"https://github.com/openai/math/blob/main/preprints/The-Hilbert-Smith-conjecture-in-every-finite-dimension-September-23-2026/paper.pdf"}],"305":[{"t":"Boundary-only obstruction","u":"https://github.com/openai/math/blob/main/preprints/A-boundary-only-obstruction-to-four-dimensional-disk-embedding-September-24-2026/paper.pdf"},{"t":"Marked tensor obstruction","u":"https://github.com/openai/math/blob/main/preprints/A-marked-tensor-obstruction-to-four-dimensional-disk-embedding-September-24-2026/paper.pdf"},{"t":"PD4 group without aspherical manifold model","u":"https://github.com/openai/math/blob/main/preprints/A-PD4-group-without-an-aspherical-manifold-model-September-24-2026/paper.pdf"}],"320":[{"t":"Nonhomeomorphic closed aspherical four-manifolds with the same homotopy type","u":"https://github.com/openai/math/blob/main/preprints/Nonhomeomorphic-closed-aspherical-four-manifolds-with-the-same-homotopy-type-October-4-2026/paper.pdf"}],"338":[{"t":"Uniformization of complete Kähler manifolds with positive bisectional curvature","u":"https://github.com/openai/math/blob/main/preprints/Uniformization-of-complete-Kahler-manifolds-with-positive-bisectional-curvature-September-23-2026/paper.pdf"}],"339":[{"t":"Entropy equality and local symmetry in negative curvature","u":"https://github.com/openai/math/blob/main/preprints/Entropy-equality-and-local-symmetry-in-negative-curvature-September-23-2026/paper.pdf"}],"340":[{"t":"A counterexample to the nearby Lagrangian conjecture","u":"https://github.com/openai/math/blob/main/preprints/A-counterexample-to-the-nearby-Lagrangian-conjecture-September-23-2026/paper.pdf"}],"345":[{"t":"Infinitely many closed geodesic images on every Riemannian sphere","u":"https://github.com/openai/math/blob/main/preprints/Infinitely-many-closed-geodesic-images-on-every-Riemannian-sphere-September-24-2026/paper.pdf"}],"346":[{"t":"A Codimension-One Bound for the Singular Set of a Stationary Integral Varifold","u":"https://github.com/openai/math/blob/main/preprints/A-Codimension-One-Bound-for-the-Singular-Set-of-a-Stationary-Integral-Varifold-October-5-2026/varifold-singular-dimension.pdf"},{"t":"Almost-everywhere regularity of stationary integral varifolds","u":"https://github.com/openai/math/blob/main/preprints/Almost-everywhere-regularity-of-stationary-integral-varifolds-September-23-2026/paper.pdf"}],"362":[{"t":"Global classical solutions of the three-dimensional relativistic Vlasov–Maxwell system","u":"https://github.com/openai/math/blob/main/preprints/Global-classical-solutions-of-the-three-dimensional-relativistic-Vlasov-Maxwell-system-September-23-2026/paper.pdf"}],"366":[{"t":"Interior regularity of planar Mumford–Shah minimizers","u":"https://github.com/openai/math/blob/main/preprints/Interior-regularity-of-planar-Mumford-Shah-minimizers-September-24-2026/Interior-regularity-of-planar-Mumford-Shah-minimizers-September-24-2026.pdf"}],"375":[{"t":"A positive resolution of De Giorgi's conjecture in dimension eight","u":"https://github.com/openai/math/blob/main/preprints/De-Giorgis-conjecture-in-dimension-eight-September-26-2026/article.pdf"}],"378":[{"t":"The Exponential Time Hypothesis is False","u":"https://github.com/openai/math/blob/main/preprints/The-Exponential-Time-Hypothesis-is-False-October-25-2026/paper.pdf"}]};
+
+/* ------------------------------------------------------------- helpers */
+
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, html) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  return e;
+};
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+/* Escape text, turning ^{…} into superscript and _{…} into subscript (nesting allowed). */
+function fmt(s) {
+  let out = "";
+  for (let i = 0; i < s.length; ) {
+    const c = s[i];
+    if ((c === "^" || c === "_") && s[i + 1] === "{") {
+      let depth = 0, j = i + 1;
+      for (; j < s.length; j++) {
+        if (s[j] === "{") depth++;
+        else if (s[j] === "}" && --depth === 0) break;
+      }
+      const tag = c === "^" ? "sup" : "sub";
+      out += `<${tag}>${fmt(s.slice(i + 2, j))}</${tag}>`;
+      i = j + 1;
+    } else {
+      out += esc(c);
+      i++;
+    }
+  }
+  return out;
+}
+/* Plain text version for aria labels. */
+const plain = (s) => s.replace(/[\^_]\{([^{}]*)\}/g, "$1").replace(/[\^_]\{/g, "").replace(/\}/g, "");
+const one = (x) => x.toFixed(1);
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+const impactOf = (sig) => Math.pow(10, (sig - 8) / 2);
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("mathrank:" + k); return v == null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("mathrank:" + k, v); } catch (e) { /* storage unavailable */ } },
+};
+
+/* --------------------------------------------------------------- state */
+
+const state = {
+  color: store.get("color", "diff"),
+  size: store.get("size", "impact"),
+  implied: store.get("implied", "0") === "1",
+};
+if (!["diff", "lean", "review", "rel"].includes(state.color)) state.color = "diff";
+if (!["impact", "equal"].includes(state.size)) state.size = "impact";
+
+/* ---------------------------------------------------------------- tree */
+
+const root = { id: "", name: "All results", children: [], parent: null };
+const byId = new Map();
+for (const [id, name] of FIELDS) {
+  const f = { id, name, children: [], parent: root };
+  root.children.push(f);
+  byId.set(id, f);
+}
+for (const r of RESULTS) {
+  r.rel = r.rel || "oct6";
+  r.lean = r.lean || "none";
+  r.review = r.review || "none";
+  r.impact = impactOf(r.sig);
+  r.parent = byId.get(r.f);
+  r.parent.children.push(r);
+  byId.set(r.id, r);
+}
+
+function rankOf(r, key) {
+  let better = 0, same = 0;
+  for (const x of RESULTS) {
+    if (x[key] > r[key]) better++;
+    else if (x[key] === r[key]) same++;
+  }
+  return `#${better + 1} of ${RESULTS.length}${same > 1 ? " (tied)" : ""}`;
+}
+
+function computeValues() {
+  root.value = 0;
+  for (const f of root.children) {
+    f.value = 0;
+    for (const r of f.children) {
+      r.hidden = !!r.implied && !state.implied;
+      r.value = r.hidden ? 0 : state.size === "equal" ? 1 : r.impact;
+      f.value += r.value;
+    }
+    root.value += f.value;
+  }
+}
+
+const kidsOf = (n) => (n.children || [])
+  .filter((c) => c.value > 0)
+  .sort((a, b) => b.value - a.value || (b.sig || 0) - (a.sig || 0) || a.name.localeCompare(b.name));
+
+function leavesOf(n) {
+  if (!n.children) return [n];
+  return n.children.flatMap(leavesOf).filter((r) => !r.hidden);
+}
+
+/* -------------------------------------------------------------- colors */
+
+const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : { matches: false };
+const theme = () => (darkQuery.matches ? "dark" : "light");
+
+const RAMP = {
+  light: ["#fbecc9", "#f3c27d", "#e2874f", "#be4d3f", "#7c2445"],
+  dark:  ["#3d2f3d", "#6f3a52", "#a9524b", "#d98552", "#f2c983"],
+};
+const CATS = {
+  lean: { title: "Lean proof", key: "lean", items: {
+    full:    { label: "Full",    light: "#3d8a5c", dark: "#4fae78" },
+    partial: { label: "Partial", light: "#d9a441", dark: "#c99a45" },
+    none:    { label: "None",    light: "#cfc8bb", dark: "#47444e" } } },
+  review: { title: "Review", key: "review", items: {
+    support:  { label: "Expert support",         light: "#3d8a5c", dark: "#4fae78" },
+    review:   { label: "Under expert review",    light: "#3e6fc4", dark: "#6f9be6" },
+    disputed: { label: "Disputed",               light: "#c2463b", dark: "#e06a5d" },
+    earlier:  { label: "Proved earlier by others", light: "#8a5bb8", dark: "#ad86d8" },
+    none:     { label: "No review yet",          light: "#cfc8bb", dark: "#47444e" } } },
+  rel: { title: "Released", key: "rel", items: {
+    sep8:  { label: "Sep 8",  light: "#2f8a8a", dark: "#4fb3b0" },
+    oct6:  { label: "Oct 6",  light: "#7486b3", dark: "#7f93c6" },
+    oct26: { label: "Oct 26", light: "#e0782e", dark: "#f0954f" } } },
+};
+const DMIN = Math.min(...RESULTS.map((r) => r.diff));
+const DMAX = Math.max(...RESULTS.map((r) => r.diff));
+
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rgbHex = (a) => "#" + a.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+function rampAt(t) {
+  const stops = RAMP[theme()];
+  const p = clamp(t, 0, 1) * (stops.length - 1);
+  const i = Math.min(Math.floor(p), stops.length - 2);
+  const a = hexRgb(stops[i]), b = hexRgb(stops[i + 1]), k = p - i;
+  return rgbHex(a.map((v, j) => v + (b[j] - v) * k));
+}
+function colorFor(r) {
+  if (state.color === "diff") return rampAt((r.diff - DMIN) / (DMAX - DMIN));
+  const c = CATS[state.color];
+  return c.items[r[c.key]][theme()];
+}
+function luminance(hex) {
+  const [r, g, b] = hexRgb(hex).map((v) => {
+    v /= 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+/* Pick whichever of near-black or white text contrasts more with the tile. */
+function ink(hex) {
+  const L = luminance(hex);
+  return (L + 0.05) / 0.061 > 1.05 / (L + 0.05) ? "#1b1916" : "#ffffff";
+}
+
+/* -------------------------------------------------------------- layout */
+
+/* Squarified treemap (Bruls, Huizing, van Wijk). Items must be sorted by value, largest first. */
+function squarify(nodes, x, y, w, h) {
+  const out = [];
+  const total = nodes.reduce((s, n) => s + n.value, 0);
+  if (!(total > 0) || w <= 0 || h <= 0) return out;
+  const scale = (w * h) / total;
+  let rest = nodes.map((n) => ({ node: n, a: n.value * scale }));
+  const worst = (row, side) => {
+    let s = 0, mx = 0, mn = Infinity;
+    for (const r of row) { s += r.a; mx = Math.max(mx, r.a); mn = Math.min(mn, r.a); }
+    return Math.max((side * side * mx) / (s * s), (s * s) / (side * side * mn));
+  };
+  while (rest.length) {
+    const side = Math.min(w, h);
+    let row = [rest[0]], i = 1, best = worst(row, side);
+    while (i < rest.length) {
+      const next = worst(row.concat(rest[i]), side);
+      if (next > best) break;
+      row.push(rest[i]); best = next; i++;
+    }
+    rest = rest.slice(i);
+    const area = row.reduce((s, r) => s + r.a, 0);
+    if (w >= h) {
+      const cw = rest.length ? area / h : w;
+      let cy = y;
+      row.forEach((r, k) => {
+        const rh = k === row.length - 1 ? y + h - cy : r.a / cw;
+        out.push({ node: r.node, x, y: cy, w: cw, h: rh });
+        cy += rh;
+      });
+      x += cw; w -= cw;
+    } else {
+      const rh = rest.length ? area / w : h;
+      let cx = x;
+      row.forEach((r, k) => {
+        const rw = k === row.length - 1 ? x + w - cx : r.a / rh;
+        out.push({ node: r.node, x: cx, y, w: rw, h: rh });
+        cx += rw;
+      });
+      y += rh; h -= rh;
+    }
+  }
+  return out;
+}
+const inset = (r, d) => ({ node: r.node, x: r.x + d, y: r.y + d, w: Math.max(0, r.w - 2 * d), h: Math.max(0, r.h - 2 * d) });
+function place(e, r) {
+  e.style.left = r.x + "px";
+  e.style.top = r.y + "px";
+  e.style.width = r.w + "px";
+  e.style.height = r.h + "px";
+}
+
+/* ---------------------------------------------------------------- tiles */
+
+function scoreLines(r, w) {
+  if (w >= 240) return [`Significance ${one(r.sig)} · Difficulty ${one(r.diff)}`];
+  if (w >= 112) return [`Significance ${one(r.sig)}`, `Difficulty ${one(r.diff)}`];
+  return [];
+}
+
+/* Width of the longest unbreakable piece of a name (breaks allowed at spaces and dashes). */
+const measureCtx = document.createElement("canvas").getContext("2d");
+let bodyFont = null;
+function longestPiece(name, fs) {
+  if (!bodyFont) bodyFont = getComputedStyle(document.body).fontFamily;
+  measureCtx.font = `600 ${fs}px ${bodyFont}`;
+  let mx = 0;
+  for (const word of plain(name).split(/\s+/)) {
+    for (const piece of word.replace(/([-–])/g, "$1\u0000").split("\u0000")) {
+      mx = Math.max(mx, measureCtx.measureText(piece).width);
+    }
+  }
+  return mx;
+}
+
+function leafTile(r, rect, big) {
+  const t = el("div", "tile leaf" + (big ? " big" : "") + (r.implied ? " implied" : ""));
+  place(t, rect);
+  const bg = colorFor(r);
+  t.style.backgroundColor = bg;
+  t.style.color = ink(bg);
+  t.dataset.id = r.id;
+  const pad = big ? 8 : 5;
+  const avail = rect.w - 2 * pad;
+  let fs = big ? clamp(Math.sqrt(rect.w * rect.h) / 10.5, 12.5, 22) : 11.5;
+  const minFs = big ? 11 : 9.5;
+  // Shrink rather than split words mid-way; tiny tiles go unlabeled (the tooltip still names them).
+  while (fs > minFs && longestPiece(r.name, fs) > avail) fs -= 0.5;
+  if (!big && longestPiece(r.name, fs) > avail) return t;
+  const lh = fs * 1.18;
+  if (rect.w < (big ? 52 : 40) || rect.h < lh + 2 * pad - 2) return t;
+  const lbl = el("div", "lbl");
+  let subs = big ? scoreLines(r, rect.w - 2 * pad) : [];
+  const subH = (n) => (n ? n * 16 + 3 : 0);
+  if (subs.length && rect.h - 2 * pad - subH(subs.length) < lh) subs = [];
+  const lines = Math.max(1, Math.floor((rect.h - 2 * pad - subH(subs.length)) / lh));
+  const nm = el("div", "nm", fmt(r.name));
+  nm.style.fontSize = fs + "px";
+  nm.style.webkitLineClamp = String(lines);
+  nm.style.lineClamp = String(lines);
+  lbl.appendChild(nm);
+  for (const s of subs) lbl.appendChild(el("div", "sub", esc(s)));
+  t.appendChild(lbl);
+  return t;
+}
+
+function groupTile(f, rect) {
+  const t = el("div", "tile group");
+  place(t, rect);
+  t.dataset.id = f.id;
+  const head = rect.h > 46 && rect.w > 60;
+  const hh = head ? 22 : 0;
+  if (head) t.appendChild(el("div", "ghead lbl", `${esc(f.name)}<span class="n">${leavesOf(f).length}</span>`));
+  const kids = squarify(kidsOf(f), 2, hh + 2, rect.w - 4, rect.h - hh - 4);
+  for (const c of kids) t.appendChild(leafTile(c.node, inset(c, 1), false));
+  return t;
+}
+
+function badge(cat, key) {
+  const item = CATS[cat].items[key];
+  const bg = item[theme()];
+  return `<span class="badge" style="background:${bg};color:${ink(bg)}">${esc(item.label)}</span>`;
+}
+
+function detailCard(r) {
+  const card = el("article", "detail");
+  const band = el("div", "dband");
+  band.style.background = colorFor(r);
+  card.appendChild(band);
+
+  const fams = r.fams || (/^\d{3}$/.test(r.id) ? [r.id] : []);
+  const famText = fams.length ? "Catalog " + fams.map((f) => "#" + f).join(", ") : "Not in the catalog";
+  const papers = fams.flatMap((f) => LINKS[f] || []);
+  const sibs = kidsOf(r.parent).filter((x) => !x.children);
+  const at = sibs.indexOf(r);
+  const prev = at > 0 ? sibs[at - 1] : null;
+  const next = at >= 0 && at < sibs.length - 1 ? sibs[at + 1] : null;
+  const covers = RESULTS.filter((x) => x.implied === r.id);
+  const by = r.implied ? byId.get(r.implied) : null;
+
+  let h = `<div class="dscroll"><div class="dbody">
+    <p class="kicker">${esc(r.parent.name)} · Released ${esc(RELEASES[r.rel])} · ${famText}</p>
+    <h2 tabindex="-1">${fmt(r.name)}</h2>
+    <div class="scores">
+      <div class="sc"><div class="sc-k">Significance</div><div class="sc-v">${one(r.sig)}</div>
+        <div class="meter"><i style="width:${clamp((r.sig - 6) / 4, 0, 1) * 100}%"></i></div><div class="sc-r">${rankOf(r, "sig")}</div></div>
+      <div class="sc"><div class="sc-k">Impact</div><div class="sc-v">${one(r.impact)}×</div>
+        <div class="meter"><i style="width:${clamp(r.impact / 10, 0, 1) * 100}%"></i></div><div class="sc-r">vs. a solid 8.0 result</div></div>
+      <div class="sc"><div class="sc-k">Difficulty</div><div class="sc-v">${one(r.diff)}</div>
+        <div class="meter"><i style="width:${clamp((r.diff - 6) / 4, 0, 1) * 100}%"></i></div><div class="sc-r">${rankOf(r, "diff")}</div></div>
+    </div>
+    <h3>What it claims</h3><p>${fmt(r.claim)}</p>
+    <h3>Why these scores</h3><p>${fmt(r.why)}</p>`;
+  if (by) h += `<h3>Implied by a newer result</h3><p><a href="${hashOf(by)}">${fmt(by.name)}</a> (released ${esc(RELEASES[by.rel])}) covers this, so it's hidden by default to avoid counting its Impact twice.</p>`;
+  if (covers.length) h += `<h3>Also covers</h3><p>${covers.map((c) => `<a href="${hashOf(c)}">${fmt(c.name)}</a>`).join(" and ")}, both released Oct 6.</p>`;
+  h += `<div class="facts">
+      <div><h3>Lean proof</h3><p>${badge("lean", r.lean)}${r.leanNote ? fmt(r.leanNote) : r.lean === "none" ? "Not formalized." : ""}</p></div>
+      <div><h3>Review</h3><p>${badge("review", r.review)}${fmt(r.reviewNote || "No outside review reported yet.")}</p></div>
+    </div>`;
+  if (papers.length) h += `<h3>Papers</h3><ul class="links">${papers.map((p) => `<li><a href="${esc(p.u)}" target="_blank" rel="noopener">${esc(p.t)}</a></li>`).join("")}</ul>`;
+  if (r.press) h += `<h3>Announcements and reporting</h3><ul class="links">${r.press.map(([t, u]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>`;
+  if (prev || next) {
+    h += `<nav class="sib" aria-label="Other results in ${esc(r.parent.name)}">
+      ${prev ? `<a href="${hashOf(prev)}">← ${fmt(prev.name)}</a>` : ""}
+      ${next ? `<a class="nx" href="${hashOf(next)}">${fmt(next.name)} →</a>` : ""}</nav>`;
+  }
+  h += `</div></div>`;
+  card.insertAdjacentHTML("beforeend", h);
+  return card;
+}
+
+/* ------------------------------------------------------------- treemap */
+
+const mapEl = $("#map");
+const tip = $("#tip");
+const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DUR = 430;
+
+let current = null;
+let currentRects = new Map();
+let pending = null;
+
+function buildLayer(node) {
+  const W = mapEl.clientWidth, H = mapEl.clientHeight;
+  const layer = el("div", "layer");
+  const rects = new Map();
+  if (!node.children) {
+    layer.appendChild(detailCard(node));
+    return { layer, rects };
+  }
+  for (const c of squarify(kidsOf(node), 0, 0, W, H)) {
+    const r = inset(c, 1.5);
+    rects.set(c.node.id, r);
+    const t = c.node.children ? groupTile(c.node, r) : leafTile(c.node, r, true);
+    t.classList.add("hit");
+    t.tabIndex = 0;
+    t.setAttribute("role", "button");
+    const n = c.node;
+    t.setAttribute("aria-label", n.children
+      ? `${n.name}, ${leavesOf(n).length} results. Zoom in.`
+      : `${plain(n.name)}. Significance ${one(n.sig)}, Impact ${one(n.impact)}, Difficulty ${one(n.diff)}. Open details.`);
+    t.addEventListener("click", () => go(n));
+    t.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(n); }
+    });
+    layer.appendChild(t);
+  }
+  return { layer, rects };
+}
+
+function finishPending() {
+  if (!pending) return;
+  clearTimeout(pending.timer);
+  pending.done();
+  pending = null;
+}
+
+function transform(r) {
+  const W = mapEl.clientWidth, H = mapEl.clientHeight;
+  return `translate(${r.x}px,${r.y}px) scale(${r.w / W},${r.h / H})`;
+}
+
+function show(node, mode) {
+  finishPending();
+  hideTip();
+  const prevNode = current, prevRects = currentRects;
+  const { layer, rects } = buildLayer(node);
+  const old = mapEl.querySelector(".layer");
+  current = node;
+  currentRects = rects;
+
+  let anim = mode;
+  let rect = null;
+  if (anim === "auto") {
+    if (prevNode && node.parent === prevNode && prevRects.has(node.id)) { anim = "in"; rect = prevRects.get(node.id); }
+    else if (prevNode && prevNode.parent === node && rects.has(prevNode.id)) { anim = "out"; rect = rects.get(prevNode.id); }
+    else anim = prevNode ? "fade" : "none";
+  }
+  if (!old || reduced || anim === "none") {
+    mapEl.replaceChildren(layer);
+    return layer;
+  }
+
+  let done;
+  if (anim === "in") {
+    layer.style.transform = transform(rect);
+    layer.classList.add("entering");
+    mapEl.appendChild(layer);
+    void layer.offsetWidth;
+    layer.classList.add("anim");
+    layer.style.transform = "";
+    old.classList.add("anim", "fading");
+    done = () => { old.remove(); layer.classList.remove("anim", "entering"); };
+  } else if (anim === "out") {
+    mapEl.insertBefore(layer, old);
+    old.classList.add("anim");
+    void old.offsetWidth;
+    old.style.transform = transform(rect);
+    old.style.opacity = "0";
+    done = () => old.remove();
+  } else {
+    layer.style.opacity = "0";
+    mapEl.appendChild(layer);
+    void layer.offsetWidth;
+    layer.classList.add("anim");
+    layer.style.opacity = "";
+    done = () => { old.remove(); layer.classList.remove("anim"); };
+  }
+  pending = { done, timer: setTimeout(() => { pending = null; done(); }, DUR + 40) };
+  return layer;
+}
+
+/* -------------------------------------------------------------- routing */
+
+function hashOf(n) {
+  const ids = [];
+  for (let x = n; x && x !== root; x = x.parent) ids.unshift(x.id);
+  return "#/" + ids.join("/");
+}
+/* Returns null for hashes that aren't routes (like #how). */
+function parseHash() {
+  const h = location.hash;
+  if (!h.startsWith("#/")) return null;
+  let n = root;
+  for (const id of h.slice(2).split("/").filter(Boolean)) {
+    let next;
+    try { next = (n.children || []).find((c) => c.id === decodeURIComponent(id)); } catch (e) { next = null; }
+    if (!next && n === root) next = byId.get(id);
+    if (!next) break;
+    n = next;
+  }
+  return n;
+}
+function go(n) {
+  const h = hashOf(n);
+  if (location.hash === h) navigate(n, "auto");
+  else location.hash = h;
+}
+
+let viaKeyboard = false;
+document.addEventListener("keydown", () => { viaKeyboard = true; }, true);
+document.addEventListener("pointerdown", () => { viaKeyboard = false; }, true);
+
+function navigate(n, mode) {
+  const from = current;
+  const layer = show(n, mode);
+  renderPath();
+  if (viaKeyboard) {
+    // Keep keyboard users oriented: land on the tile they zoomed out of, else the first tile.
+    const back = from && layer.querySelector(`.hit[data-id="${from.id}"]`);
+    const target = back || layer.querySelector(".hit, .detail h2");
+    if (target) target.focus({ preventScroll: true });
+  }
+}
+
+window.addEventListener("hashchange", () => {
+  const n = parseHash();
+  if (n) navigate(n, "auto");
+});
+
+/* ----------------------------------------------------------- page chrome */
+
+function renderPath() {
+  const path = [];
+  for (let n = current; n; n = n.parent) path.unshift(n);
+  $("#path").innerHTML = path.map((n, i) => i === path.length - 1
+    ? `<li aria-current="page">${fmt(n.name)}</li>`
+    : `<li><a href="${hashOf(n)}">${fmt(n.name)}</a></li>`).join("");
+  $("#back").disabled = current === root;
+  let stat;
+  if (current.children) {
+    const leaves = leavesOf(current);
+    const total = leaves.reduce((s, r) => s + r.impact, 0);
+    stat = `${leaves.length} results · total Impact ${one(total)}×`;
+  } else {
+    stat = `Impact ${one(current.impact)}×`;
+  }
+  $("#stat").textContent = stat;
+}
+
+function renderLegend() {
+  const lg = $("#legend");
+  if (state.color === "diff") {
+    const stops = RAMP[theme()];
+    lg.innerHTML = `<span class="t">Difficulty</span><span>${one(DMIN)} easier</span><span class="ramp" style="background:linear-gradient(90deg,${stops.join(",")})"></span><span>${one(DMAX)} harder</span>`;
+    return;
+  }
+  const cat = CATS[state.color];
+  const shown = leavesOf(root);
+  lg.innerHTML = `<span class="t">${esc(cat.title)}</span>` + Object.entries(cat.items)
+    .map(([k, v]) => {
+      const n = shown.filter((r) => r[cat.key] === k).length;
+      return n ? `<span><span class="sw" style="background:${v[theme()]}"></span>${esc(v.label)} (${n})</span>` : "";
+    }).join("");
+}
+
+function syncControls() {
+  for (const seg of document.querySelectorAll(".seg")) {
+    for (const b of seg.querySelectorAll("button")) {
+      const on = state[seg.dataset.key] === b.dataset.v;
+      b.setAttribute("aria-checked", String(on));
+      b.tabIndex = on ? 0 : -1;
+    }
+  }
+  $("#implied").checked = state.implied;
+}
+
+function rerender() {
+  computeValues();
+  show(current || parseHash() || root, "none");
+  renderPath();
+  renderLegend();
+  $("#count").textContent = String(leavesOf(root).length);
+}
+
+for (const seg of document.querySelectorAll(".seg")) {
+  const buttons = [...seg.querySelectorAll("button")];
+  const pick = (b) => {
+    state[seg.dataset.key] = b.dataset.v;
+    store.set(seg.dataset.key, b.dataset.v);
+    syncControls();
+    rerender();
+  };
+  for (const b of buttons) b.addEventListener("click", () => pick(b));
+  seg.addEventListener("keydown", (e) => {
+    const i = buttons.findIndex((b) => b.dataset.v === state[seg.dataset.key]);
+    const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (!d) return;
+    e.preventDefault();
+    const b = buttons[(i + d + buttons.length) % buttons.length];
+    pick(b);
+    b.focus();
+  });
+}
+$("#implied").addEventListener("change", (e) => {
+  state.implied = e.target.checked;
+  store.set("implied", state.implied ? "1" : "0");
+  rerender();
+});
+$("#back").addEventListener("click", () => { if (current.parent) go(current.parent); });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || !current || !current.parent) return;
+  if (e.target.closest && e.target.closest("input, textarea, select")) return;
+  go(current.parent);
+});
+
+/* -------------------------------------------------------------- tooltip */
+
+function hideTip() { tip.hidden = true; }
+mapEl.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "mouse" || !current.children) return hideTip();
+  const t = e.target.closest && e.target.closest(".leaf");
+  const r = t && byId.get(t.dataset.id);
+  if (!r) return hideTip();
+  tip.innerHTML = `<b>${fmt(r.name)}</b><span class="m">${esc(r.parent.name)} · ${esc(RELEASES[r.rel])}</span><br>
+    Significance ${one(r.sig)} · Impact ${one(r.impact)}× · Difficulty ${one(r.diff)}<br>
+    <span class="m">Lean: ${esc(CATS.lean.items[r.lean].label)} · ${esc(CATS.review.items[r.review].label)}</span>`;
+  tip.hidden = false;
+  const pad = 14, tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  if (x + tw > window.innerWidth - 8) x = e.clientX - tw - pad;
+  if (y + th > window.innerHeight - 8) y = e.clientY - th - pad;
+  tip.style.left = Math.max(8, x) + "px";
+  tip.style.top = Math.max(8, y) + "px";
+});
+mapEl.addEventListener("pointerleave", hideTip);
+window.addEventListener("scroll", hideTip, { passive: true });
+
+/* ----------------------------------------------------------------- init */
+
+$("#sig-anchors").innerHTML = SIG_ANCHORS.map(([n, s]) =>
+  `<tr><td>${esc(n)}</td><td class="num">${one(s)}</td><td class="num">${one(impactOf(s))}×</td></tr>`).join("");
+$("#diff-anchors").innerHTML = DIFF_ANCHORS.map(([n, d]) =>
+  `<tr><td>${esc(n)}</td><td class="num">${one(d)}</td></tr>`).join("");
+
+let resizeTimer = null;
+let lastSize = "";
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const size = mapEl.clientWidth + "x" + mapEl.clientHeight;
+    if (size !== lastSize) { lastSize = size; rerender(); }
+  }, 120);
+});
+if (darkQuery.addEventListener) darkQuery.addEventListener("change", rerender);
+
+syncControls();
+computeValues();
+current = null;
+lastSize = mapEl.clientWidth + "x" + mapEl.clientHeight;
+show(parseHash() || root, "none");
+renderPath();
+renderLegend();
+$("#count").textContent = String(leavesOf(root).length);
+})();
+</script>
+</body>
+</html>
