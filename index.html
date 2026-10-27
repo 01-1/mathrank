@@ -11,7 +11,7 @@
 :root{
   --bg:#f4f5f7;--fg:#16181d;--muted:#5d6471;--line:#d9dde3;--card:#ffffff;--mapbg:#dde1e7;
   --group:#eceef2;--ghead:#2a2e36;--accent:#2f6690;--focus:#2457c5;--chip:#e5e8ed;
-  --refline:#8a93a3;--refbg:rgba(255,255,255,.65);
+  --refline:#8a93a3;--refbg:rgba(255,255,255,.65);--tile-ink:#16181d;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --serif:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
   color-scheme:light;
@@ -19,7 +19,7 @@
 @media (prefers-color-scheme:dark){
   :root{--bg:#121317;--fg:#e8eaed;--muted:#9aa1ad;--line:#2d3139;--card:#1b1d22;--mapbg:#0a0b0e;
     --group:#1e2128;--ghead:#c9ced8;--accent:#6cc4c9;--focus:#8fb0ff;--chip:#262a31;
-    --refline:#5d6573;--refbg:rgba(255,255,255,.04);color-scheme:dark}
+    --refline:#5d6573;--refbg:rgba(255,255,255,.04);--tile-ink:#eef0f3;color-scheme:dark}
 }
 html{background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans);-webkit-text-size-adjust:100%}
@@ -70,7 +70,8 @@ h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
 .nm{font-weight:600;line-height:1.18;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;hyphens:auto}
 .sub{font-size:12px;line-height:16px;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nm+.sub{margin-top:3px}
-.leaf{box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.leaf{box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);color:var(--tile-ink)}
+.badge{color:var(--tile-ink)}
 .leaf.nested{box-shadow:0 0 0 1.5px var(--card)}
 .refs{position:absolute}
 .refs-h{position:absolute;left:0;right:0;top:0;height:20px;padding:2px 3px;font:600 11px/16px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -221,7 +222,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
       <div class="block">
         <h3>Review and implied results</h3>
         <p><em>Review</em> is what outside experts have said so far. Most results have no review yet.</p>
-        <p>The Oct 26 local smoothing result implies two Oct 6 results (3D restriction and Kakeya), so they're drawn inside its tile. Its score already includes what they prove, so they don't add to the totals. How the tile is split between them is only approximate.</p>
+        <p>The Oct 26 local smoothing result implies two Oct 6 results (3D restriction and Kakeya), so they're drawn inside its tile at their own size. Its score includes theirs, so the rest of its tile is what's new on Oct 26, and they aren't counted again in totals.</p>
       </div>
     </div>
   </section>
@@ -333,9 +334,9 @@ const RESULTS = [
     why:"Open since 1994 and known only in low dimensions." },
 
   // Real & complex analysis
-  { id:"079", f:"an", rel:"oct26", name:"Local smoothing, Kakeya and restriction", sig:9.4, diff:9.2, lean:"full",
+  { id:"079", f:"an", rel:"oct26", name:"Local smoothing, Kakeya and restriction", sig:9.6, diff:9.2, lean:"full",
     claim:"Sogge's local smoothing conjecture in every dimension. It implies the Kakeya conjecture, the Bochner–Riesz conjecture, and Fourier restriction for the sphere, paraboloid and cone across the interior of the conjectured range.",
-    why:"Local smoothing was known only in 2D (2019), and Kakeya only in 3D (Wang–Zahl, 2025). The proof uses a new auxiliary PDE.",
+    why:"Local smoothing was known only in 2D (2019), and Kakeya only in 3D (Wang–Zahl, 2025). The proof uses a new auxiliary PDE. The score covers the two Oct 6 results drawn inside this tile plus every other dimension, so it's higher than those two put together.",
     leanNote:"Every dimension, including the Kakeya and Bochner–Riesz consequences.",
     reviewNote:"Released Oct 26 as the model wrote it. No outside review yet.",
     press:[OCT26] },
@@ -662,6 +663,13 @@ function rankOf(r, key) {
 function computeValues() {
   root.value = 0;
   for (const r of RESULTS) r.value = weightOf(r);
+  // A result's tile includes the results nested inside it, each at its own size. With Equal sizing
+  // every result counts once; otherwise the tile is at least as big as its parts.
+  for (const r of RESULTS) {
+    if (!r.subs) continue;
+    const parts = r.subs.reduce((s, x) => s + x.value, 0);
+    r.value = state.size === "equal" ? 1 + r.subs.length : Math.max(r.value, parts);
+  }
   for (const f of root.children) {
     f.value = f.children.reduce((s, r) => s + r.value, 0);
     root.value += f.value;
@@ -685,55 +693,44 @@ const impactTotal = (rs) => rs.filter((r) => !r.implied).reduce((s, r) => s + r.
 const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : { matches: false };
 const theme = () => (darkQuery.matches ? "dark" : "light");
 
-/* Score colors come in 5 distinct steps of one hue, so "more" is easy to read:
-   darker in light mode, brighter in dark mode. Cuts split the results roughly evenly. */
+/* Tile text is one fixed color per theme (dark in light mode, light in dark mode), so only the
+   fill changes. Every color below keeps at least about 4.3:1 contrast with that text.
+   Score colors come in 5 evenly spaced steps of one hue: darker = more in light mode,
+   brighter = more in dark mode. Cuts split the results roughly evenly. */
 const STEPS = {
   diff: {
     title: "Difficulty", key: "diff", cuts: [7.8, 8.3, 8.6, 8.9],
     range: (lo, hi) => (lo === hi ? one(lo) : `${one(lo)}–${one(hi)}`),
-    light: ["#f8d3cf", "#ef9a8f", "#e05a4c", "#b8291f", "#7a0d12"],
-    dark:  ["#3a1d20", "#6e2a2a", "#a83a32", "#e0614f", "#ffb3a6"] },
+    light: ["#fde3df", "#f8c3ba", "#f4a093", "#ee7a67", "#e5503b"],
+    dark:  ["#3a1a1c", "#5a2223", "#7c2b28", "#9e342d", "#c03e33"] },
   impact: {
     title: "Impact", key: "sig", cuts: [8.5, 8.6, 8.8, 9.0],
     range: (lo, hi) => (lo === hi ? one(impactOf(lo)) : `${one(impactOf(lo))}–${one(impactOf(hi))}`) + "×",
-    light: ["#cfe1f3", "#9cc2e5", "#5f9bd0", "#2a68ab", "#0b3c7a"],
-    dark:  ["#18283a", "#1f4a73", "#2f74ad", "#5ea5da", "#acd6f6"] },
+    light: ["#e1edf9", "#bcd6f0", "#93bce6", "#6aa1da", "#4a88cf"],
+    dark:  ["#15233a", "#1b3858", "#224d7a", "#28629b", "#2c6eac"] },
 };
 const stepOf = (kind, r) => STEPS[kind].cuts.filter((c) => r[STEPS[kind].key] >= c - 1e-9).length;
-const GRAY = { light: "#c3c8d0", dark: "#3a3f48" };
+const GRAY = { light: "#c9ced6", dark: "#3a3f48" };
 const CATS = {
   lean: { title: "Lean proof", key: "lean", items: {
-    full:    { label: "Full",    light: "#21918c", dark: "#21918c" },
-    partial: { label: "Partial", light: "#b5de2b", dark: "#b5de2b" },
+    full:    { label: "Full",    light: "#4fb3ae", dark: "#1d6f6b" },
+    partial: { label: "Partial", light: "#cfe36b", dark: "#5c7318" },
     none:    { label: "None",    ...GRAY } } },
   review: { title: "Review", key: "review", items: {
-    support:  { label: "Expert support",           light: "#21918c", dark: "#21918c" },
-    review:   { label: "Under expert review",      light: "#3b528b", dark: "#4f6bb0" },
-    disputed: { label: "Disputed",                 light: "#e4572e", dark: "#e4572e" },
-    earlier:  { label: "Proved earlier by others", light: "#8e5bb5", dark: "#a77bd0" },
+    support:  { label: "Expert support",           light: "#4fb3ae", dark: "#1d6f6b" },
+    review:   { label: "Under expert review",      light: "#8fa8dc", dark: "#3b528b" },
+    disputed: { label: "Disputed",                 light: "#f07a5c", dark: "#b33a22" },
+    earlier:  { label: "Proved earlier by others", light: "#b993d8", dark: "#6d4691" },
     none:     { label: "No review yet",            ...GRAY } } },
   rel: { title: "Released", key: "rel", items: {
-    sep8:  { label: "Sep 8",  light: "#5ec962", dark: "#5ec962" },
-    oct6:  { label: "Oct 6",  light: "#3b528b", dark: "#4f6bb0" },
-    oct26: { label: "Oct 26", light: "#fde725", dark: "#fde725" } } },
+    sep8:  { label: "Sep 8",  light: "#7fd27f", dark: "#2e7a3a" },
+    oct6:  { label: "Oct 6",  light: "#8fa8dc", dark: "#3b528b" },
+    oct26: { label: "Oct 26", light: "#f6dc4a", dark: "#7a6b10" } } },
 };
-const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 function colorFor(r) {
   if (STEPS[state.color]) return STEPS[state.color][theme()][stepOf(state.color, r)];
   const c = CATS[state.color];
   return c.items[r[c.key]][theme()];
-}
-function luminance(hex) {
-  const [r, g, b] = hexRgb(hex).map((v) => {
-    v /= 255;
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-/* Pick whichever of near-black or white text contrasts more with the tile. */
-function ink(hex) {
-  const L = luminance(hex);
-  return (L + 0.05) / 0.061 > 1.05 / (L + 0.05) ? "#1b1916" : "#ffffff";
 }
 
 /* -------------------------------------------------------------- layout */
@@ -826,23 +823,25 @@ function leafTile(r, rect, big) {
   place(t, rect);
   const bg = colorFor(r);
   t.style.backgroundColor = bg;
-  t.style.color = ink(bg);
   t.dataset.id = r.id;
 
-  // Results this one implies are drawn inside it. They share its area rather than adding to it,
-  // because its score already includes them; the split between them is approximate.
+  // Results this one implies are drawn inside it at their own true size; its area includes theirs,
+  // and the rest of the tile is what's new in this result. The label goes in that leftover part:
+  // a band across the top, or a column on the left when the band would be too thin to read.
   let lw = rect.w, lh0 = rect.h;
-  if (r.subs && rect.w >= (big ? 120 : 150) && rect.h >= (big ? 64 : 80)) {
-    const sw = r.subs.reduce((s, x) => s + x.value, 0);
-    const p = sw / (sw + r.value);
-    const wide = rect.w >= rect.h;
-    const nest = wide
-      ? { x: rect.w * (1 - p), y: 0, w: rect.w * p, h: rect.h }
-      : { x: 0, y: rect.h * (1 - p), w: rect.w, h: rect.h * p };
-    if (wide) lw = nest.x; else lh0 = nest.y;
+  const p = r.subs ? r.subs.reduce((s, x) => s + x.value, 0) / r.value : 0;
+  const need = (big ? 12.5 : 11.5) * 1.18 + 2 * (big ? 8 : 5) - 2;  // one line of the parent's name
+  const room = (1 - p) * rect.h >= need || (1 - p) * rect.w >= 120;
+  // Only split the tile when the parent's own name still fits; otherwise draw it whole.
+  if (r.subs && room && rect.w >= (big ? 120 : 150) && rect.h >= (big ? 64 : 80)) {
+    const top = (1 - p) * rect.h >= Math.max(need, 30) || (1 - p) * rect.w < 120;
+    const nest = top
+      ? { x: 0, y: rect.h * (1 - p), w: rect.w, h: rect.h * p }
+      : { x: rect.w * (1 - p), y: 0, w: rect.w * p, h: rect.h };
+    if (top) lh0 = nest.y; else lw = nest.x;
     const kids = [...r.subs].sort((a, b) => b.value - a.value);
-    for (const c of squarify(kids, nest.x + 3, nest.y + 3, nest.w - 6, nest.h - 6)) {
-      const st = leafTile(c.node, inset(c, 1), false);
+    for (const c of squarify(kids, nest.x, nest.y, nest.w, nest.h)) {
+      const st = leafTile(c.node, inset(c, 1.5), false);
       st.classList.add("nested");
       t.appendChild(st);
     }
@@ -932,7 +931,7 @@ function refStrip({ strip, side, R }) {
 function badge(cat, key) {
   const item = CATS[cat].items[key];
   const bg = item[theme()];
-  return `<span class="badge" style="background:${bg};color:${ink(bg)}">${esc(item.label)}</span>`;
+  return `<span class="badge" style="background:${bg}">${esc(item.label)}</span>`;
 }
 
 function detailCard(r) {
@@ -965,7 +964,7 @@ function detailCard(r) {
     <h3>What it claims</h3><p>${fmt(r.claim)}</p>
     <h3>Why these scores</h3><p>${fmt(r.why)}</p>`;
   if (by) h += `<h3>Implied by a newer result</h3><p><a href="${hashOf(by)}">${fmt(by.name)}</a> (released ${esc(RELEASES[by.rel])}) proves everything this does. This result is drawn inside its tile, and its Impact isn't counted again in totals.</p>`;
-  if (covers.length) h += `<h3>Also covers</h3><p>${covers.map((c) => `<a href="${hashOf(c)}">${fmt(c.name)}</a>`).join(" and ")}, both released Oct 6. They're drawn inside this tile, and this score already includes them.</p>`;
+  if (covers.length) h += `<h3>Also covers</h3><p>${covers.map((c) => `<a href="${hashOf(c)}">${fmt(c.name)}</a>`).join(" and ")}, both released Oct 6. They're drawn inside this tile at their own size, and the rest of the tile is what's new here.</p>`;
   h += `<div class="facts">
       <div><h3>Lean proof</h3><p>${badge("lean", r.lean)}${r.leanNote ? fmt(r.leanNote) : r.lean === "none" ? "Not formalized." : ""}</p></div>
       <div><h3>Review</h3><p>${badge("review", r.review)}${fmt(r.reviewNote || "No outside review reported yet.")}</p></div>

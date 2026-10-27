@@ -5,7 +5,7 @@ A zoomable treemap of the math results OpenAI's models produced in September and
 - **Tile area** is Impact by default: how much a result would matter if it holds up. It can also be sized by Difficulty, or with every tile equal.
 - **Color** shows whichever score isn't already setting the size (Difficulty or Impact) in 5 steps, or Lean proof status, review status, or release date.
 - **For scale**: dashed tiles beside the map show the Riemann Hypothesis and Fermat/Poincaré at the same scale.
-- **Nested results**: the Oct 26 local smoothing result implies two Oct 6 results, so they're drawn inside its tile and aren't counted twice.
+- **Nested results**: the Oct 26 local smoothing result implies two Oct 6 results, so they're drawn inside its tile at their own size. The rest of its tile is what's new, and they aren't counted twice.
 - **Click a tile** to zoom into it. Use Back, the path above the map, or Esc to zoom out.
 - Every view has its own link, for example `index.html#/nt/003` for the quasi-Riemann hypothesis.
 
