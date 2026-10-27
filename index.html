@@ -885,33 +885,32 @@ function groupTile(f, rect) {
   return t;
 }
 
-/* Where the "For scale" strip goes (right side on wide maps, bottom on tall ones), sized so the
-   reference tiles share the treemap's area per unit. Returns how close to true scale it is. */
+/* Where the "For scale" strip goes (right side on wide maps, bottom on tall ones). It's always at
+   true scale: its tiles get exactly the same area per unit as the treemap, so when zoomed into a
+   small field the reference tiles take most of the view rather than being shrunk. */
 const REF_HEAD = 20, REF_GAP = 5;
 function refLayout(W, H, T) {
   const R = REFS.reduce((s, a) => s + weightOf(a), 0);
   const side = W >= H;
-  let strip, main, tilesArea;
+  let strip, main;
   if (side) {
-    const w = clamp((R * W * H / T) / ((H - REF_HEAD) + R * H / T), 96, W * 0.34);
+    // Solve w·(H − head)/R = (W − w − gap)·H/T for the strip width w.
+    const w = (R * (W - REF_GAP) * H / T) / ((H - REF_HEAD) + R * H / T);
     strip = { x: W - w, y: 0, w, h: H };
     main = { x: 0, y: 0, w: W - w - REF_GAP, h: H };
-    tilesArea = w * (H - REF_HEAD);
   } else {
-    const h = clamp(R * (H - REF_HEAD) / (T + R) + REF_HEAD, 70, H * 0.4);
-    strip = { x: 0, y: H - h, w: W, h };
-    main = { x: 0, y: 0, w: W, h: H - h - REF_GAP };
-    tilesArea = W * (h - REF_HEAD);
+    // Solve W·t/R = W·(H − head − t − gap)/T for the tile height t.
+    const t = R * (H - REF_HEAD - REF_GAP) / (T + R);
+    strip = { x: 0, y: H - t - REF_HEAD, w: W, h: t + REF_HEAD };
+    main = { x: 0, y: 0, w: W, h: H - t - REF_HEAD - REF_GAP };
   }
-  return { strip, main, side, R, ratio: (tilesArea / R) / ((main.w * main.h) / T) };
+  return { strip, main, side, R };
 }
 
-function refStrip({ strip, side, R, ratio }) {
+function refStrip({ strip, side, R }) {
   const box = el("div", "refs");
   place(box, strip);
-  const note = ratio < 0.95 ? `shown at ${Math.round(ratio * 100)}% scale`
-    : ratio > 1.05 ? `enlarged ${one(ratio)}×` : "";
-  box.appendChild(el("div", "refs-h", `For scale${note ? ` <span>· ${esc(note)}</span>` : ""}`));
+  box.appendChild(el("div", "refs-h", "For scale"));
   const ih = strip.h - REF_HEAD;
   let off = 0;
   for (const a of REFS) {
