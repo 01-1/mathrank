@@ -37,9 +37,7 @@ h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
 .seg{display:inline-flex;flex-wrap:wrap;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
 .seg button{font:500 14px/1.2 var(--sans);color:var(--fg);background:none;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
 .seg button:hover{background:color-mix(in srgb,var(--card) 55%,transparent)}
-.seg button[aria-checked="true"]{background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.14)}
-.seg button:disabled{opacity:.35;cursor:default;background:none}
-.seg button:focus-visible,.back:focus-visible,.chk input:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.seg button[aria-checked="true"]{background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.14)}.seg button:focus-visible,.back:focus-visible,.chk input:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
 .chk{font-size:14px;display:inline-flex;gap:7px;align-items:center;cursor:pointer}
 .chk input{width:16px;height:16px;accent-color:var(--accent);margin:0}
 
@@ -615,11 +613,11 @@ const state = {
 };
 if (!["diff", "impact", "lean", "review", "rel"].includes(state.color)) state.color = "diff";
 if (!["impact", "diff", "equal"].includes(state.size)) state.size = "impact";
-/* Never color by the score that already sets the size: Impact size gets Difficulty color and vice versa. */
+/* When the size changes, color defaults to the other score (Impact size gets Difficulty color and
+   vice versa). Picking the same score for both afterwards is still allowed. */
 function fixColor() {
   if (state.color === state.size) state.color = state.size === "impact" ? "diff" : "impact";
 }
-fixColor();
 
 /* Tile weight under the current sizing. Difficulty uses the same curve as Impact. */
 const weightOf = (x) => (state.size === "equal" ? 1 : impactOf(state.size === "diff" ? x.diff : x.sig));
@@ -693,8 +691,8 @@ const STEPS = {
   diff: {
     title: "Difficulty", key: "diff", cuts: [7.8, 8.3, 8.6, 8.9],
     range: (lo, hi) => (lo === hi ? one(lo) : `${one(lo)}–${one(hi)}`),
-    light: ["#d5ceec", "#ad9fd8", "#8270c0", "#5b3d9f", "#36106b"],
-    dark:  ["#2d2744", "#4a3d7c", "#7262b4", "#a191d8", "#dcd3f8"] },
+    light: ["#f8d3cf", "#ef9a8f", "#e05a4c", "#b8291f", "#7a0d12"],
+    dark:  ["#3a1d20", "#6e2a2a", "#a83a32", "#e0614f", "#ffb3a6"] },
   impact: {
     title: "Impact", key: "sig", cuts: [8.5, 8.6, 8.8, 9.0],
     range: (lo, hi) => (lo === hi ? one(impactOf(lo)) : `${one(impactOf(lo))}–${one(impactOf(hi))}`) + "×",
@@ -1191,9 +1189,6 @@ function syncControls() {
       const on = state[seg.dataset.key] === b.dataset.v;
       b.setAttribute("aria-checked", String(on));
       b.tabIndex = on ? 0 : -1;
-      const clash = seg.dataset.key === "color" && b.dataset.v === state.size;
-      b.disabled = clash;
-      b.title = clash ? "Already shown by tile size" : "";
     }
   }
 }
@@ -1209,9 +1204,8 @@ function rerender() {
 for (const seg of document.querySelectorAll(".seg")) {
   const buttons = [...seg.querySelectorAll("button")];
   const pick = (b) => {
-    if (b.disabled) return;
     state[seg.dataset.key] = b.dataset.v;
-    fixColor();
+    if (seg.dataset.key === "size") fixColor();
     store.set("size", state.size);
     store.set("color", state.color);
     syncControls();
@@ -1223,7 +1217,7 @@ for (const seg of document.querySelectorAll(".seg")) {
     if (!d) return;
     e.preventDefault();
     let i = buttons.findIndex((b) => b.dataset.v === state[seg.dataset.key]);
-    do i = (i + d + buttons.length) % buttons.length; while (buttons[i].disabled);
+    i = (i + d + buttons.length) % buttons.length;
     pick(buttons[i]);
     buttons[i].focus();
   });
