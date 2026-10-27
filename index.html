@@ -38,6 +38,7 @@ h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
 .seg button{font:500 14px/1.2 var(--sans);color:var(--fg);background:none;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
 .seg button:hover{background:color-mix(in srgb,var(--card) 55%,transparent)}
 .seg button[aria-checked="true"]{background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.seg button:disabled{opacity:.35;cursor:default;background:none}
 .seg button:focus-visible,.back:focus-visible,.chk input:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
 .chk{font-size:14px;display:inline-flex;gap:7px;align-items:center;cursor:pointer}
 .chk input{width:16px;height:16px;accent-color:var(--accent);margin:0}
@@ -71,7 +72,8 @@ h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
 .nm{font-weight:600;line-height:1.18;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;hyphens:auto}
 .sub{font-size:12px;line-height:16px;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nm+.sub{margin-top:3px}
-.implied{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.3) 0 5px,transparent 5px 10px)}
+.leaf{box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.leaf.nested{box-shadow:0 0 0 1.5px var(--card)}
 .refs{position:absolute}
 .refs-h{position:absolute;left:0;right:0;top:0;height:20px;padding:2px 3px;font:600 11px/16px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .refs-h span{text-transform:none;letter-spacing:0;font-weight:500}
@@ -104,12 +106,11 @@ h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
 .sib .nx{text-align:right;margin-left:auto}
 
 /* legend */
-.below{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;padding:10px 0 2px;align-items:center}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;padding:2px 0 8px;border-bottom:1px solid var(--line)}
 .legend .t{font-weight:600}
 .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .ramp{display:inline-block;width:150px;height:10px;border-radius:3px;vertical-align:-1px;margin:0 6px}
-.hint{color:var(--muted);font-size:13px;margin:0}
+.hint{color:var(--muted);font-size:13px;margin:8px 0 0}
 
 /* tooltip */
 .tip{position:fixed;z-index:50;max-width:300px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.4;box-shadow:0 8px 28px rgba(0,0,0,.2);pointer-events:none}
@@ -166,6 +167,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
     <div class="ctl"><span class="ctl-l" id="color-l">Color</span>
       <div class="seg" role="radiogroup" aria-labelledby="color-l" data-key="color">
         <button type="button" role="radio" data-v="diff">Difficulty</button>
+        <button type="button" role="radio" data-v="impact">Impact</button>
         <button type="button" role="radio" data-v="lean">Lean proof</button>
         <button type="button" role="radio" data-v="review">Review</button>
         <button type="button" role="radio" data-v="rel">Release</button>
@@ -178,8 +180,8 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
         <button type="button" role="radio" data-v="equal">Equal</button>
       </div>
     </div>
-    <label class="chk"><input type="checkbox" id="implied"> Show results that newer ones imply</label>
   </div>
+  <div class="legend" id="legend"></div>
 
   <nav class="crumbs" aria-label="Zoom path">
     <button type="button" class="back" id="back" aria-label="Zoom out">← Back</button>
@@ -187,10 +189,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
     <span class="stat" id="stat" aria-live="polite"></span>
   </nav>
   <div class="map" id="map"></div>
-  <div class="below">
-    <div class="legend" id="legend"></div>
-    <p class="hint">Click a tile to zoom in. Use Back, the path above, or Esc to zoom out.</p>
-  </div>
+  <p class="hint">Click a tile to zoom in. Use Back, the path above, or Esc to zoom out.</p>
   <noscript><p>This page needs JavaScript to draw the treemap.</p></noscript>
 
   <section class="how" id="how">
@@ -224,7 +223,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
       <div class="block">
         <h3>Review and implied results</h3>
         <p><em>Review</em> is what outside experts have said so far. Most results have no review yet.</p>
-        <p>The Oct 26 local smoothing result implies two Oct 6 results (3D restriction and Kakeya). They're hidden by default so their Impact isn't counted twice.</p>
+        <p>The Oct 26 local smoothing result implies two Oct 6 results (3D restriction and Kakeya), so they're drawn inside its tile. Its score already includes what they prove, so they don't add to the totals. How the tile is split between them is only approximate.</p>
       </div>
     </div>
   </section>
@@ -613,10 +612,14 @@ const store = {
 const state = {
   color: store.get("color", "diff"),
   size: store.get("size", "impact"),
-  implied: store.get("implied", "0") === "1",
 };
-if (!["diff", "lean", "review", "rel"].includes(state.color)) state.color = "diff";
+if (!["diff", "impact", "lean", "review", "rel"].includes(state.color)) state.color = "diff";
 if (!["impact", "diff", "equal"].includes(state.size)) state.size = "impact";
+/* Never color by the score that already sets the size: Impact size gets Difficulty color and vice versa. */
+function fixColor() {
+  if (state.color === state.size) state.color = state.size === "impact" ? "diff" : "impact";
+}
+fixColor();
 
 /* Tile weight under the current sizing. Difficulty uses the same curve as Impact. */
 const weightOf = (x) => (state.size === "equal" ? 1 : impactOf(state.size === "diff" ? x.diff : x.sig));
@@ -635,9 +638,18 @@ for (const r of RESULTS) {
   r.lean = r.lean || "none";
   r.review = r.review || "none";
   r.impact = impactOf(r.sig);
-  r.parent = byId.get(r.f);
-  r.parent.children.push(r);
+  r.field = byId.get(r.f);
   byId.set(r.id, r);
+}
+/* Results implied by a newer one live inside it (in .subs), not directly in their field. */
+for (const r of RESULTS) {
+  if (r.implied) {
+    r.parent = byId.get(r.implied);
+    (r.parent.subs = r.parent.subs || []).push(r);
+  } else {
+    r.parent = r.field;
+    r.field.children.push(r);
+  }
 }
 
 function rankOf(r, key) {
@@ -651,13 +663,9 @@ function rankOf(r, key) {
 
 function computeValues() {
   root.value = 0;
+  for (const r of RESULTS) r.value = weightOf(r);
   for (const f of root.children) {
-    f.value = 0;
-    for (const r of f.children) {
-      r.hidden = !!r.implied && !state.implied;
-      r.value = r.hidden ? 0 : weightOf(r);
-      f.value += r.value;
-    }
+    f.value = f.children.reduce((s, r) => s + r.value, 0);
     root.value += f.value;
   }
 }
@@ -666,19 +674,34 @@ const kidsOf = (n) => (n.children || [])
   .filter((c) => c.value > 0)
   .sort((a, b) => b.value - a.value || (b.sig || 0) - (a.sig || 0) || a.name.localeCompare(b.name));
 
+/* Every result under a node, including ones nested inside other results. */
 function leavesOf(n) {
-  if (!n.children) return [n];
-  return n.children.flatMap(leavesOf).filter((r) => !r.hidden);
+  if (n.children) return n.children.flatMap(leavesOf);
+  return [n, ...(n.subs || []).flatMap(leavesOf)];
 }
+/* Total Impact, not counting nested results twice (their parent's score includes them). */
+const impactTotal = (rs) => rs.filter((r) => !r.implied).reduce((s, r) => s + r.impact, 0);
 
 /* -------------------------------------------------------------- colors */
 
 const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : { matches: false };
 const theme = () => (darkQuery.matches ? "dark" : "light");
 
-/* Viridis, easier (yellow) to harder (purple), in both themes. */
-const VIRIDIS = ["#fde725", "#5ec962", "#21918c", "#3b528b", "#440154"];
-const RAMP = { light: VIRIDIS, dark: VIRIDIS };
+/* Score colors come in 5 distinct steps of one hue, so "more" is easy to read:
+   darker in light mode, brighter in dark mode. Cuts split the results roughly evenly. */
+const STEPS = {
+  diff: {
+    title: "Difficulty", key: "diff", cuts: [7.8, 8.3, 8.6, 8.9],
+    range: (lo, hi) => (lo === hi ? one(lo) : `${one(lo)}–${one(hi)}`),
+    light: ["#d5ceec", "#ad9fd8", "#8270c0", "#5b3d9f", "#36106b"],
+    dark:  ["#2d2744", "#4a3d7c", "#7262b4", "#a191d8", "#dcd3f8"] },
+  impact: {
+    title: "Impact", key: "sig", cuts: [8.5, 8.6, 8.8, 9.0],
+    range: (lo, hi) => (lo === hi ? one(impactOf(lo)) : `${one(impactOf(lo))}–${one(impactOf(hi))}`) + "×",
+    light: ["#cfe1f3", "#9cc2e5", "#5f9bd0", "#2a68ab", "#0b3c7a"],
+    dark:  ["#18283a", "#1f4a73", "#2f74ad", "#5ea5da", "#acd6f6"] },
+};
+const stepOf = (kind, r) => STEPS[kind].cuts.filter((c) => r[STEPS[kind].key] >= c - 1e-9).length;
 const GRAY = { light: "#c3c8d0", dark: "#3a3f48" };
 const CATS = {
   lean: { title: "Lean proof", key: "lean", items: {
@@ -696,20 +719,9 @@ const CATS = {
     oct6:  { label: "Oct 6",  light: "#3b528b", dark: "#4f6bb0" },
     oct26: { label: "Oct 26", light: "#fde725", dark: "#fde725" } } },
 };
-const DMIN = Math.min(...RESULTS.map((r) => r.diff));
-const DMAX = Math.max(...RESULTS.map((r) => r.diff));
-
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-const rgbHex = (a) => "#" + a.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
-function rampAt(t) {
-  const stops = RAMP[theme()];
-  const p = clamp(t, 0, 1) * (stops.length - 1);
-  const i = Math.min(Math.floor(p), stops.length - 2);
-  const a = hexRgb(stops[i]), b = hexRgb(stops[i + 1]), k = p - i;
-  return rgbHex(a.map((v, j) => v + (b[j] - v) * k));
-}
 function colorFor(r) {
-  if (state.color === "diff") return rampAt((r.diff - DMIN) / (DMAX - DMIN));
+  if (STEPS[state.color]) return STEPS[state.color][theme()][stepOf(state.color, r)];
   const c = CATS[state.color];
   return c.items[r[c.key]][theme()];
 }
@@ -812,26 +824,47 @@ function longestPiece(name, fs) {
 }
 
 function leafTile(r, rect, big) {
-  const t = el("div", "tile leaf" + (big ? " big" : "") + (r.implied ? " implied" : ""));
+  const t = el("div", "tile leaf" + (big ? " big" : ""));
   place(t, rect);
   const bg = colorFor(r);
   t.style.backgroundColor = bg;
   t.style.color = ink(bg);
   t.dataset.id = r.id;
+
+  // Results this one implies are drawn inside it. They share its area rather than adding to it,
+  // because its score already includes them; the split between them is approximate.
+  let lw = rect.w, lh0 = rect.h;
+  if (r.subs && rect.w >= (big ? 120 : 150) && rect.h >= (big ? 64 : 80)) {
+    const sw = r.subs.reduce((s, x) => s + x.value, 0);
+    const p = sw / (sw + r.value);
+    const wide = rect.w >= rect.h;
+    const nest = wide
+      ? { x: rect.w * (1 - p), y: 0, w: rect.w * p, h: rect.h }
+      : { x: 0, y: rect.h * (1 - p), w: rect.w, h: rect.h * p };
+    if (wide) lw = nest.x; else lh0 = nest.y;
+    const kids = [...r.subs].sort((a, b) => b.value - a.value);
+    for (const c of squarify(kids, nest.x + 3, nest.y + 3, nest.w - 6, nest.h - 6)) {
+      const st = leafTile(c.node, inset(c, 1), false);
+      st.classList.add("nested");
+      t.appendChild(st);
+    }
+  }
+
   const pad = big ? 8 : 5;
-  const avail = rect.w - 2 * pad;
-  let fs = big ? clamp(Math.sqrt(rect.w * rect.h) / 10.5, 12.5, 22) : 11.5;
+  const avail = lw - 2 * pad;
+  let fs = big ? clamp(Math.sqrt(lw * lh0) / 10.5, 12.5, 22) : 11.5;
   const minFs = big ? 11 : 9.5;
   // Shrink rather than split words mid-way; tiny tiles go unlabeled (the tooltip still names them).
   while (fs > minFs && longestPiece(r.name, fs) > avail) fs -= 0.5;
   if (!big && longestPiece(r.name, fs) > avail) return t;
   const lh = fs * 1.18;
-  if (rect.w < (big ? 52 : 40) || rect.h < lh + 2 * pad - 2) return t;
+  if (lw < (big ? 52 : 40) || lh0 < lh + 2 * pad - 2) return t;
   const lbl = el("div", "lbl");
-  let subs = big ? scoreLines(r, rect.w - 2 * pad) : [];
+  lbl.style.maxWidth = avail + "px";
+  let subs = big ? scoreLines(r, avail) : [];
   const subH = (n) => (n ? n * 16 + 3 : 0);
-  if (subs.length && rect.h - 2 * pad - subH(subs.length) < lh) subs = [];
-  const lines = Math.max(1, Math.floor((rect.h - 2 * pad - subH(subs.length)) / lh));
+  if (subs.length && lh0 - 2 * pad - subH(subs.length) < lh) subs = [];
+  const lines = Math.max(1, Math.floor((lh0 - 2 * pad - subH(subs.length)) / lh));
   const nm = el("div", "nm", fmt(r.name));
   nm.style.fontSize = fs + "px";
   nm.style.webkitLineClamp = String(lines);
@@ -914,7 +947,7 @@ function detailCard(r) {
   const fams = r.fams || (/^\d{3}$/.test(r.id) ? [r.id] : []);
   const famText = fams.length ? "Catalog " + fams.map((f) => "#" + f).join(", ") : "Not in the catalog";
   const papers = fams.flatMap((f) => LINKS[f] || []);
-  const sibs = kidsOf(r.parent).filter((x) => !x.children);
+  const sibs = r.implied ? r.parent.subs : kidsOf(r.parent).filter((x) => !x.children);
   const at = sibs.indexOf(r);
   const prev = at > 0 ? sibs[at - 1] : null;
   const next = at >= 0 && at < sibs.length - 1 ? sibs[at + 1] : null;
@@ -922,7 +955,7 @@ function detailCard(r) {
   const by = r.implied ? byId.get(r.implied) : null;
 
   let h = `<div class="dscroll"><div class="dbody">
-    <p class="kicker">${esc(r.parent.name)} · Released ${esc(RELEASES[r.rel])} · ${famText}</p>
+    <p class="kicker">${esc(r.field.name)} · Released ${esc(RELEASES[r.rel])} · ${famText}</p>
     <h2 tabindex="-1">${fmt(r.name)}</h2>
     <div class="scores">
       <div class="sc"><div class="sc-k">Significance</div><div class="sc-v">${one(r.sig)}</div>
@@ -934,8 +967,8 @@ function detailCard(r) {
     </div>
     <h3>What it claims</h3><p>${fmt(r.claim)}</p>
     <h3>Why these scores</h3><p>${fmt(r.why)}</p>`;
-  if (by) h += `<h3>Implied by a newer result</h3><p><a href="${hashOf(by)}">${fmt(by.name)}</a> (released ${esc(RELEASES[by.rel])}) covers this, so it's hidden by default to avoid counting its Impact twice.</p>`;
-  if (covers.length) h += `<h3>Also covers</h3><p>${covers.map((c) => `<a href="${hashOf(c)}">${fmt(c.name)}</a>`).join(" and ")}, both released Oct 6.</p>`;
+  if (by) h += `<h3>Implied by a newer result</h3><p><a href="${hashOf(by)}">${fmt(by.name)}</a> (released ${esc(RELEASES[by.rel])}) proves everything this does. This result is drawn inside its tile, and its Impact isn't counted again in totals.</p>`;
+  if (covers.length) h += `<h3>Also covers</h3><p>${covers.map((c) => `<a href="${hashOf(c)}">${fmt(c.name)}</a>`).join(" and ")}, both released Oct 6. They're drawn inside this tile, and this score already includes them.</p>`;
   h += `<div class="facts">
       <div><h3>Lean proof</h3><p>${badge("lean", r.lean)}${r.leanNote ? fmt(r.leanNote) : r.lean === "none" ? "Not formalized." : ""}</p></div>
       <div><h3>Review</h3><p>${badge("review", r.review)}${fmt(r.reviewNote || "No outside review reported yet.")}</p></div>
@@ -943,7 +976,7 @@ function detailCard(r) {
   if (papers.length) h += `<h3>Papers</h3><ul class="links">${papers.map((p) => `<li><a href="${esc(p.u)}" target="_blank" rel="noopener">${esc(p.t)}</a></li>`).join("")}</ul>`;
   if (r.press) h += `<h3>Announcements and reporting</h3><ul class="links">${r.press.map(([t, u]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>`;
   if (prev || next) {
-    h += `<nav class="sib" aria-label="Other results in ${esc(r.parent.name)}">
+    h += `<nav class="sib" aria-label="Other results in ${esc((r.implied ? r.parent : r.field).name)}">
       ${prev ? `<a href="${hashOf(prev)}">← ${fmt(prev.name)}</a>` : ""}
       ${next ? `<a class="nx" href="${hashOf(next)}">${fmt(next.name)} →</a>` : ""}</nav>`;
   }
@@ -1071,10 +1104,13 @@ function parseHash() {
   const h = location.hash;
   if (!h.startsWith("#/")) return null;
   let n = root;
-  for (const id of h.slice(2).split("/").filter(Boolean)) {
-    let next;
-    try { next = (n.children || []).find((c) => c.id === decodeURIComponent(id)); } catch (e) { next = null; }
-    if (!next && n === root) next = byId.get(id);
+  const within = (x, anc) => { for (; x; x = x.parent) if (x === anc) return true; return false; };
+  for (const raw of h.slice(2).split("/").filter(Boolean)) {
+    let id;
+    try { id = decodeURIComponent(raw); } catch (e) { break; }
+    // Accept the full path, or any shortcut that skips levels (e.g. #/074).
+    let next = [...(n.children || []), ...(n.subs || [])].find((c) => c.id === id);
+    if (!next) { const x = byId.get(id); if (x && within(x, n)) next = x; }
     if (!next) break;
     n = next;
   }
@@ -1119,8 +1155,7 @@ function renderPath() {
   let stat;
   if (current.children) {
     const leaves = leavesOf(current);
-    const total = leaves.reduce((s, r) => s + r.impact, 0);
-    stat = `${leaves.length} results · total Impact ${one(total)}×`;
+    stat = `${leaves.length} results · total Impact ${one(impactTotal(leaves))}×`;
   } else {
     stat = `Impact ${one(current.impact)}×`;
   }
@@ -1129,14 +1164,21 @@ function renderPath() {
 
 function renderLegend() {
   const lg = $("#legend");
-  if (state.color === "diff") {
-    const stops = RAMP[theme()];
-    lg.innerHTML = `<span class="t">Difficulty</span><span>${one(DMIN)} easier</span><span class="ramp" style="background:linear-gradient(90deg,${stops.join(",")})"></span><span>${one(DMAX)} harder</span>`;
+  const area = `<span><span class="t">Area:</span> ${state.size === "impact" ? "Impact" : state.size === "diff" ? "Difficulty" : "equal"}</span>`;
+  const st = STEPS[state.color];
+  if (st) {
+    const more = state.color === "diff" ? "harder" : "more";
+    const hint = `${theme() === "dark" ? "brighter" : "darker"} = ${more}`;
+    lg.innerHTML = `${area}<span><span class="t">Color:</span> ${st.title} (${hint})</span>` + st[theme()].map((c, i) => {
+      const vals = RESULTS.filter((r) => stepOf(state.color, r) === i).map((r) => r[st.key]);
+      if (!vals.length) return "";
+      return `<span><span class="sw" style="background:${c}"></span>${st.range(Math.min(...vals), Math.max(...vals))} (${vals.length})</span>`;
+    }).join("");
     return;
   }
   const cat = CATS[state.color];
   const shown = leavesOf(root);
-  lg.innerHTML = `<span class="t">${esc(cat.title)}</span>` + Object.entries(cat.items)
+  lg.innerHTML = `${area}<span class="t">Color: ${esc(cat.title)}</span>` + Object.entries(cat.items)
     .map(([k, v]) => {
       const n = shown.filter((r) => r[cat.key] === k).length;
       return n ? `<span><span class="sw" style="background:${v[theme()]}"></span>${esc(v.label)} (${n})</span>` : "";
@@ -1149,9 +1191,11 @@ function syncControls() {
       const on = state[seg.dataset.key] === b.dataset.v;
       b.setAttribute("aria-checked", String(on));
       b.tabIndex = on ? 0 : -1;
+      const clash = seg.dataset.key === "color" && b.dataset.v === state.size;
+      b.disabled = clash;
+      b.title = clash ? "Already shown by tile size" : "";
     }
   }
-  $("#implied").checked = state.implied;
 }
 
 function rerender() {
@@ -1165,27 +1209,25 @@ function rerender() {
 for (const seg of document.querySelectorAll(".seg")) {
   const buttons = [...seg.querySelectorAll("button")];
   const pick = (b) => {
+    if (b.disabled) return;
     state[seg.dataset.key] = b.dataset.v;
-    store.set(seg.dataset.key, b.dataset.v);
+    fixColor();
+    store.set("size", state.size);
+    store.set("color", state.color);
     syncControls();
     rerender();
   };
   for (const b of buttons) b.addEventListener("click", () => pick(b));
   seg.addEventListener("keydown", (e) => {
-    const i = buttons.findIndex((b) => b.dataset.v === state[seg.dataset.key]);
     const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
     if (!d) return;
     e.preventDefault();
-    const b = buttons[(i + d + buttons.length) % buttons.length];
-    pick(b);
-    b.focus();
+    let i = buttons.findIndex((b) => b.dataset.v === state[seg.dataset.key]);
+    do i = (i + d + buttons.length) % buttons.length; while (buttons[i].disabled);
+    pick(buttons[i]);
+    buttons[i].focus();
   });
 }
-$("#implied").addEventListener("change", (e) => {
-  state.implied = e.target.checked;
-  store.set("implied", state.implied ? "1" : "0");
-  rerender();
-});
 $("#back").addEventListener("click", () => { if (current.parent) go(current.parent); });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape" || !current || !current.parent) return;
@@ -1205,7 +1247,7 @@ mapEl.addEventListener("pointermove", (e) => {
     tip.innerHTML = `<b>${esc(a.full)}</b><span class="m">Human result, for scale</span><br>
       Significance ${one(a.sig)} · Impact ${one(impactOf(a.sig))}× · Difficulty ${one(a.diff)}`;
   } else if (r) {
-    tip.innerHTML = `<b>${fmt(r.name)}</b><span class="m">${esc(r.parent.name)} · ${esc(RELEASES[r.rel])}</span><br>
+    tip.innerHTML = `<b>${fmt(r.name)}</b><span class="m">${esc(r.field.name)} · ${esc(RELEASES[r.rel])}${r.implied ? " · inside " + esc(r.parent.name) : ""}</span><br>
       Significance ${one(r.sig)} · Impact ${one(r.impact)}× · Difficulty ${one(r.diff)}<br>
       <span class="m">Lean: ${esc(CATS.lean.items[r.lean].label)} · ${esc(CATS.review.items[r.review].label)}</span>`;
   } else {
