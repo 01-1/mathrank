@@ -88,7 +88,7 @@ h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
 .dbody{max-width:880px;padding:22px 26px 30px}
 .kicker{color:var(--muted);font-size:13px;margin:0 0 4px}
 .detail h2{font:600 30px/1.15 var(--serif);margin:0 0 18px;outline:none}
-.scores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:6px}
+.scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:6px}
 .sc{background:var(--bg);border-radius:8px;padding:10px 12px}
 .sc-k{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .sc-v{font:600 28px/1.2 var(--serif);font-variant-numeric:tabular-nums}
@@ -195,22 +195,19 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
 
   <section class="how" id="how">
     <h2>How the scores work</h2>
-    <p>Each result gets two judgment calls, good to about ±0.3: how much it would matter <strong>if it's correct</strong>, and how hard it was. Most of these claims haven't been checked by people yet, so read the scores as “if this holds up.”</p>
+    <p>Each result gets two judgment calls: how much it would matter <strong>if it's correct</strong>, and how hard it was. Both use absolute, linear scales: a 4 counts twice as much as a 2, and the Riemann Hypothesis is 10 on each. Scores are rough estimates, with uncertainty of about 40%. Most of these claims haven't been checked by people yet, so read the scores as “if this holds up.”</p>
     <div class="grid2">
       <div class="block">
-        <h3>Significance</h3>
-        <p>How much the result would matter. 10 is the Riemann Hypothesis.</p>
+        <h3>Impact</h3>
+        <p>How much the result would matter. <strong>Tile area is proportional to Impact</strong> unless you size by Difficulty or give every result equal area. Impact can be added up, without counting implied results twice.</p>
+        <p>The dashed tiles marked “For scale” are human results drawn at the same scale: the Riemann Hypothesis, and Fermat and Poincaré.</p>
         <table class="anchors">
-          <thead><tr><th>Human result, for scale</th><th class="num">Significance</th><th class="num">Impact</th></tr></thead>
+          <thead><tr><th>Human result, for scale</th><th class="num">Impact</th></tr></thead>
           <tbody id="sig-anchors"></tbody>
         </table>
       </div>
       <div class="block">
-        <h3>Impact</h3>
-        <p>Significance on a multiplying scale, so results can be added up: Impact = 10<sup>(Significance − 8)/2</sup>.</p>
-        <p>A solid 8.0 result is 1×. One extra point of Significance is about 3.2× the Impact, and two extra points is 10×. <strong>Tile area is Impact</strong> unless you size by Difficulty, which uses the same formula with Difficulty in place of Significance.</p>
-        <p>The dashed tiles marked “For scale” are human results drawn at the same scale: the Riemann Hypothesis, and Fermat and Poincaré.</p>
-        <h3 style="margin-top:18px">Difficulty</h3>
+        <h3>Difficulty</h3>
         <p>How hard the problem was for people: how long it held out, how much expert effort went into it, and whether it needed new ideas. Proof length doesn't count. 10 is the Riemann Hypothesis, which is still unsolved.</p>
         <table class="anchors">
           <thead><tr><th>Human result, for scale</th><th class="num">Difficulty</th></tr></thead>
@@ -599,7 +596,7 @@ function fmt(s) {
 }
 /* Plain text version for aria labels. */
 const plain = (s) => s.replace(/[\^_]\{([^{}]*)\}/g, "$1").replace(/[\^_]\{/g, "").replace(/\}/g, "");
-const one = (x) => x.toFixed(1);
+const fa = (x) => x.toFixed(x < 1 ? 2 : 1);
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const impactOf = (sig) => Math.pow(10, (sig - 8) / 2);
 
@@ -640,6 +637,7 @@ for (const r of RESULTS) {
   r.lean = r.lean || "none";
   r.review = r.review || "none";
   r.impact = impactOf(r.sig);
+  r.dabs = impactOf(r.diff);
   r.field = byId.get(r.f);
   byId.set(r.id, r);
 }
@@ -703,12 +701,12 @@ const theme = () => (darkQuery.matches ? "dark" : "light");
 const STEPS = {
   diff: {
     title: "Difficulty", key: "diff", cuts: [7.4, 7.9, 8.2, 8.5],
-    range: (lo, hi) => (lo === hi ? one(lo) : `${one(lo)}–${one(hi)}`),
+    range: (lo, hi) => (lo === hi ? fa(impactOf(lo)) : `${fa(impactOf(lo))}–${fa(impactOf(hi))}`),
     light: ["#fde3df", "#f8c3ba", "#f4a093", "#ee7a67", "#e5503b"],
     dark:  ["#3a1a1c", "#5a2223", "#7c2b28", "#9e342d", "#c03e33"] },
   impact: {
     title: "Impact", key: "sig", cuts: [8.1, 8.2, 8.4, 8.6],
-    range: (lo, hi) => (lo === hi ? one(impactOf(lo)) : `${one(impactOf(lo))}–${one(impactOf(hi))}`) + "×",
+    range: (lo, hi) => (lo === hi ? fa(impactOf(lo)) : `${fa(impactOf(lo))}–${fa(impactOf(hi))}`),
     light: ["#e1edf9", "#bcd6f0", "#93bce6", "#6aa1da", "#4a88cf"],
     dark:  ["#15233a", "#1b3858", "#224d7a", "#28629b", "#2c6eac"] },
 };
@@ -801,8 +799,8 @@ function place(e, r) {
 /* ---------------------------------------------------------------- tiles */
 
 function scoreLines(r, w) {
-  if (w >= 240) return [`Significance ${one(r.sig)} · Difficulty ${one(r.diff)}`];
-  if (w >= 112) return [`Significance ${one(r.sig)}`, `Difficulty ${one(r.diff)}`];
+  if (w >= 240) return [`Impact ${fa(r.impact)} · Difficulty ${fa(r.dabs)}`];
+  if (w >= 112) return [`Impact ${fa(r.impact)}`, `Difficulty ${fa(r.dabs)}`];
   return [];
 }
 
@@ -924,7 +922,7 @@ function refStrip({ strip, side, R }) {
     const t = el("div", "tile ref");
     place(t, inset(r, 1.5));
     t.dataset.ref = a.id;
-    const metric = state.size === "diff" ? `Difficulty ${one(a.diff)}` : `Significance ${one(a.sig)}`;
+    const metric = state.size === "diff" ? `Difficulty ${fa(impactOf(a.diff))}` : `Impact ${fa(impactOf(a.sig))}`;
     t.innerHTML = `<div class="lbl"><div class="nm">${esc(a.name)}</div><div class="sub">${esc(metric)}</div></div>`;
     box.appendChild(t);
   }
@@ -957,12 +955,10 @@ function detailCard(r) {
     <p class="kicker">${esc(r.field.name)} · Released ${esc(RELEASES[r.rel])} · ${famText}</p>
     <h2 tabindex="-1">${fmt(r.name)}</h2>
     <div class="scores">
-      <div class="sc"><div class="sc-k">Significance</div><div class="sc-v">${one(r.sig)}</div>
-        <div class="meter"><i style="width:${clamp((r.sig - 6) / 4, 0, 1) * 100}%"></i></div><div class="sc-r">${rankOf(r, "sig")}</div></div>
-      <div class="sc"><div class="sc-k">Impact</div><div class="sc-v">${one(r.impact)}×</div>
-        <div class="meter"><i style="width:${clamp(r.impact / 10, 0, 1) * 100}%"></i></div><div class="sc-r">vs. a solid 8.0 result</div></div>
-      <div class="sc"><div class="sc-k">Difficulty</div><div class="sc-v">${one(r.diff)}</div>
-        <div class="meter"><i style="width:${clamp((r.diff - 6) / 4, 0, 1) * 100}%"></i></div><div class="sc-r">${rankOf(r, "diff")}</div></div>
+      <div class="sc"><div class="sc-k">Impact</div><div class="sc-v">${fa(r.impact)}</div>
+        <div class="meter"><i style="width:${clamp(r.impact / 10, 0, 1) * 100}%"></i></div><div class="sc-r">${rankOf(r, "sig")} · RH = 10</div></div>
+      <div class="sc"><div class="sc-k">Difficulty</div><div class="sc-v">${fa(r.dabs)}</div>
+        <div class="meter"><i style="width:${clamp(r.dabs / 10, 0, 1) * 100}%"></i></div><div class="sc-r">${rankOf(r, "diff")} · RH = 10</div></div>
     </div>
     <h3>What it claims</h3><p>${fmt(r.claim)}</p>
     <h3>Why these scores</h3><p>${fmt(r.why)}</p>`;
@@ -1019,7 +1015,7 @@ function buildLayer(node) {
     const n = c.node;
     t.setAttribute("aria-label", n.children
       ? `${n.name}, ${leavesOf(n).length} results. Zoom in.`
-      : `${plain(n.name)}. Significance ${one(n.sig)}, Impact ${one(n.impact)}, Difficulty ${one(n.diff)}. Open details.`);
+      : `${plain(n.name)}. Impact ${fa(n.impact)}, Difficulty ${fa(n.dabs)}. Open details.`);
     t.addEventListener("click", () => go(n));
     t.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(n); }
@@ -1154,9 +1150,9 @@ function renderPath() {
   let stat;
   if (current.children) {
     const leaves = leavesOf(current);
-    stat = `${leaves.length} results · total Impact ${one(impactTotal(leaves))}×`;
+    stat = `${leaves.length} results · total Impact ${fa(impactTotal(leaves))}`;
   } else {
-    stat = `Impact ${one(current.impact)}×`;
+    stat = `Impact ${fa(current.impact)} · Difficulty ${fa(current.dabs)}`;
   }
   $("#stat").textContent = stat;
 }
@@ -1249,10 +1245,10 @@ mapEl.addEventListener("pointermove", (e) => {
   const r = t && byId.get(t.dataset.id);
   if (a) {
     tip.innerHTML = `<b>${esc(a.full)}</b><span class="m">Human result, for scale</span><br>
-      Significance ${one(a.sig)} · Impact ${one(impactOf(a.sig))}× · Difficulty ${one(a.diff)}`;
+      Impact ${fa(impactOf(a.sig))} · Difficulty ${fa(impactOf(a.diff))}`;
   } else if (r) {
     tip.innerHTML = `<b>${fmt(r.name)}</b><span class="m">${esc(r.field.name)} · ${esc(RELEASES[r.rel])}${r.implied ? " · inside " + esc(r.parent.name) : ""}</span><br>
-      Significance ${one(r.sig)} · Impact ${one(r.impact)}× · Difficulty ${one(r.diff)}<br>
+      Impact ${fa(r.impact)} · Difficulty ${fa(r.dabs)}<br>
       <span class="m">Lean: ${esc(CATS.lean.items[r.lean].label)} · ${esc(CATS.review.items[r.review].label)}</span>`;
   } else {
     return hideTip();
@@ -1271,9 +1267,9 @@ window.addEventListener("scroll", hideTip, { passive: true });
 /* ----------------------------------------------------------------- init */
 
 $("#sig-anchors").innerHTML = SIG_ANCHORS.map(([n, s]) =>
-  `<tr><td>${esc(n)}</td><td class="num">${one(s)}</td><td class="num">${one(impactOf(s))}×</td></tr>`).join("");
+  `<tr><td>${esc(n)}</td><td class="num">${fa(impactOf(s))}</td></tr>`).join("");
 $("#diff-anchors").innerHTML = DIFF_ANCHORS.map(([n, d]) =>
-  `<tr><td>${esc(n)}</td><td class="num">${one(d)}</td></tr>`).join("");
+  `<tr><td>${esc(n)}</td><td class="num">${fa(impactOf(d))}</td></tr>`).join("");
 
 let resizeTimer = null;
 let lastSize = "";

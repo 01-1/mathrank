@@ -23,8 +23,9 @@ All the data lives in `index.html`:
 
 ## The scales
 
-- **Significance** is how much the result would matter if it's correct, on a scale where the Riemann Hypothesis is 10.
-- **Impact** is 10^((Significance − 8)/2). A solid 8.0 result is 1×, and every 2 extra points of Significance means 10× the Impact.
-- **Difficulty** is how hard the problem was for people: how long it held out, how much effort went into it, and whether it needed new ideas. Proof length doesn't count. The Riemann Hypothesis, which is still unsolved, is 10. Sizing by Difficulty uses the same 10^((x − 8)/2) curve as Impact.
+- **Impact** is how much the result would matter if it's correct.
+- **Difficulty** is how hard the problem was for people: how long it held out, how much effort went into it, and whether it needed new ideas. Proof length doesn't count.
 
-The page gives human results to calibrate each scale. Every score is a judgment call, good to about ±0.3, and most of these results haven't had any human review yet.
+Both are absolute, linear scales with the Riemann Hypothesis at 10: a score of 4 is twice a score of 2. Tile areas are directly proportional to the selected score. Labels, color legends, tooltips, detail meters, and human reference scores all use these same absolute values.
+
+The page gives human results to calibrate each scale. Every score is a rough judgment call, with uncertainty of about 40%, and most of these results haven't had any human review yet.
