@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mathrank</title>
-<meta name="description" content="OpenAI's AI-produced math results from fall 2026, sized by significance and colored by difficulty in a zoomable treemap.">
+<meta name="description" content="AI-assisted mathematical discoveries and claims across systems, sized by Impact and colored by Difficulty in a zoomable treemap.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='18' height='30' rx='3' fill='%233b528b'/%3E%3Crect x='21' y='1' width='10' height='17' rx='3' fill='%2321918c'/%3E%3Crect x='21' y='20' width='10' height='11' rx='3' fill='%23fde725'/%3E%3C/svg%3E">
 <style>
 *{box-sizing:border-box}
@@ -157,8 +157,8 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
 <header class="site">
   <div class="wrap">
     <h1>Mathrank</h1>
-    <p class="lede">The math results OpenAI's models produced in September and October 2026, sized by how much they would matter if they hold up.</p>
-    <p class="meta"><span id="count">62</span> results · scores as of October 26, 2026 · <a href="#how">How the scores work</a></p>
+    <p class="lede">Selected mathematical discoveries and claims made with AI, from OpenAI, Claude, AxiomProver and Google DeepMind, sized by how much they would matter if they hold up.</p>
+    <p class="meta"><span id="count">68</span> results · 2022–2026 · scores as of October 27, 2026 · <a href="#how">How the scores work</a></p>
   </div>
 </header>
 
@@ -216,11 +216,11 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
       </div>
       <div class="block">
         <h3>Lean proof</h3>
-        <p>Whether the main theorem was checked by the Lean proof assistant. <em>Partial</em> means only part of the claim, or supporting lemmas. A Lean check only proves the formal statement, and nobody has yet checked those statements against the papers.</p>
+        <p>Whether the sources report the main theorem checked by the Lean proof assistant. <em>Partial</em> means only part of the claim, or supporting lemmas. Lean checks a formal statement; matching that statement to the intended mathematics requires separate review. Automated numerical or algebraic checks are not marked as Lean proofs.</p>
       </div>
       <div class="block">
         <h3>Review and implied results</h3>
-        <p><em>Review</em> is what outside experts have said so far. Most results have no review yet.</p>
+        <p><em>Review</em> is what outside experts have said so far. Notes distinguish journal publication, expert support, and checks reported by a project's own authors. A computational construction is not a proof of optimality. Most recent claims have no review yet.</p>
         <p>The Oct 26 local smoothing result implies two Oct 6 results (3D restriction and Kakeya), so they're drawn inside its tile at their own size. Its score includes theirs, so the rest of its tile is what's new on Oct 26, and they aren't counted again in totals.</p>
       </div>
     </div>
@@ -229,6 +229,10 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
   <section class="sources" id="sources">
     <h2>Sources</h2>
     <ul>
+      <li><a href="https://jacobianconjectures.com/">Jacobian counterexample project</a>, <a href="https://jacobianfun.org/jacobian-explained">Gallagher's explainer</a> and <a href="https://github.com/alerad/alpoge-lean">Lean formalization</a>: the higher-dimensional claim, attribution and verification artifacts</li>
+      <li><a href="https://arxiv.org/abs/2602.03716">Fel's conjecture paper</a> and <a href="https://axiommath.ai/research/proof-of-concept/">Axiom Math's account</a></li>
+      <li><a href="https://arxiv.org/abs/2506.13131">AlphaEvolve paper</a>: matrix multiplication and geometric constructions</li>
+      <li><a href="https://www.nature.com/articles/s41586-023-06924-6">FunSearch (Nature)</a> and <a href="https://www.nature.com/articles/s41586-022-05172-4">AlphaTensor (Nature)</a>: program search and reinforcement-learning discoveries</li>
       <li><a href="https://github.com/openai/math">openai/math</a>: the catalog, papers, Lean scope notes and release history</li>
       <li><a href="https://openai.com/index/building-scientific-understanding-with-academic-communities/">OpenAI: Working with academic communities</a> (Oct 26)</li>
       <li><a href="https://openai.com/index/sharing-ai-progress-in-mathematics/">OpenAI: Sharing AI progress in mathematics</a> (Oct 6)</li>
@@ -248,7 +252,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
 </main>
 
 <footer class="site">
-  <div class="wrap">Scores are opinions, not peer review. Paper links go to OpenAI's catalog as of October 26, 2026.</div>
+  <div class="wrap">Scores are opinions, not peer review. A curated selection across AI systems, not an exhaustive catalog. Each detail card links its sources; historical records are not necessarily today's best bounds.</div>
 </footer>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
@@ -277,10 +281,13 @@ const FIELDS = [
 ];
 
 const RELEASES = { sep8: "Sep 8, 2026", oct6: "Oct 6, 2026", oct26: "Oct 26, 2026" };
+const dateOf = (r) => r.date || RELEASES[r.rel];
+const systemOf = (r) => r.system || "OpenAI";
 
 const OCT26 = ["OpenAI announcement, Oct 26", "https://openai.com/index/building-scientific-understanding-with-academic-communities/"];
 
-/* Defaults: rel "oct6", lean "none", review "none". Text supports ^{sup} and _{sub}. */
+/* Defaults: OpenAI, rel "oct6", lean "none", review "none". Cross-system entries set system,
+   date and papers explicitly; rel is a color cohort. Text supports ^{sup} and _{sub}. */
 const RESULTS = [
   // Number theory
   { id:"003", f:"nt", name:"Quasi-Riemann hypothesis", sig:9.2, diff:6.7, lean:"full", review:"support",
@@ -536,6 +543,50 @@ const RESULTS = [
   { id:"366", f:"pde", name:"Planar Mumford–Shah regularity", sig:7.9, diff:7.4,
     claim:"The discontinuity set of a planar Mumford–Shah minimizer is locally a smooth arc, a crack tip, or three arcs meeting at 120°.",
     why:"Mumford and Shah's 1989 conjecture." },
+
+  // Cross-system discoveries; exact dates are separate from release-color cohorts.
+  { id:"jacobian", f:"ag", rel:"earlier", date:"Jul 19, 2026", system:"Claude Fable · Levent Alpöge", name:"Jacobian counterexample in dimensions ≥ 3", sig:9.2, diff:8.8, lean:"full",
+    claim:"A reported polynomial map ℂ³ → ℂ³ has constant Jacobian determinant −2 but sends three distinct points to the same point. Appending unchanged coordinates extends the counterexample to every dimension ≥ 3. This does not settle the two-dimensional Jacobian conjecture.",
+    why:"A counterexample to the higher-dimensional form of a central conjecture dating to 1939 would reshape polynomial-map theory. The remaining plane case limits its scope. The difficulty reflects decades of work, not the length of the explicit certificate. Scores are conditional on the reported result.",
+    leanNote:"A separate Lean/Mathlib repository reports a complete formalization of the counterexample, with no sorry or additional axioms. This site's listing is not an audit of the formal statement or build.",
+    reviewNote:"The project and Gallagher's explainer report exact determinant and collision checks. The displayed identities were also checked with exact symbolic algebra for this listing; independent expert review or journal acceptance is not established by these sources.",
+    papers:[{t:"Counterexample and verification project",u:"https://jacobianconjectures.com/"},{t:"Lean formalization of Alpöge's counterexample",u:"https://github.com/alerad/alpoge-lean"}],
+    press:[["Gallagher: The Jacobian counterexample, explained","https://jacobianfun.org/jacobian-explained"]] },
+  { id:"fel", f:"al", rel:"earlier", date:"Feb 3, 2026", system:"Axiom Math · AxiomProver", name:"Fel's conjecture on numerical semigroups", sig:6.8, diff:6.5, lean:"full",
+    claim:"A formula for normalized alternating syzygy power sums of numerical semigroups, for every integer p ≥ 0, in terms of gap power sums and universal symmetric polynomials. The authors report a proof generated by AxiomProver and fully formalized in Lean/Mathlib.",
+    why:"A genuine research-conjecture resolution, but specialized rather than a field-wide breakthrough. Its impact and difficulty sit below the broad conjectures elsewhere on the map; formal verification is evidence about correctness, not a multiplier on either score.",
+    leanNote:"The paper and public proof artifact report a complete Lean/Mathlib proof. Checking that the formal statement matches the intended conjecture is a separate review task.",
+    reviewNote:"Paper and proof artifacts are public. The sources consulted do not establish independent journal acceptance. The date shown is the first arXiv submission; Axiom's announcement followed on Feb 5.",
+    papers:[{t:"Fel's Conjecture on Syzygies of Numerical Semigroups",u:"https://arxiv.org/abs/2602.03716"},{t:"Lean proof and task artifacts",u:"https://github.com/AxiomMath/fel-polynomial"}],
+    press:[["Axiom Math: Proof of concept","https://axiommath.ai/research/proof-of-concept/"]] },
+  { id:"alphaevolve-matmul", f:"cs", rel:"earlier", date:"May 14, 2025", system:"Google DeepMind · AlphaEvolve (Gemini)", name:"4×4 complex matrix multiplication in 48 products", sig:7.2, diff:7.2,
+    claim:"An algorithm multiplies two 4×4 complex-valued matrices using 48 scalar multiplications, improving on 49 from two levels of Strassen's algorithm. This is a finite-size arithmetic result, not a proof that 48 is optimal or a resolution of the asymptotic matrix-multiplication exponent.",
+    why:"A concrete improvement on a longstanding small-matrix benchmark. It is narrower than an asymptotic exponent breakthrough, and counts arithmetic operations rather than guaranteeing a practical speedup on every machine.",
+    leanNote:"No Lean formalization is cited. AlphaEvolve used automated evaluators to check candidate algorithms.",
+    reviewNote:"Reported in the AlphaEvolve white paper, with public mathematical-results artifacts. Independent peer-review status is not established by the sources consulted. The date is the announcement; the arXiv paper followed in June.",
+    papers:[{t:"AlphaEvolve: A coding agent for scientific and algorithmic discovery",u:"https://arxiv.org/abs/2506.13131"},{t:"Mathematical-results notebook",u:"https://github.com/google-deepmind/alphaevolve_results/blob/master/mathematical_results.ipynb"}],
+    press:[["DeepMind: AlphaEvolve","https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/"]] },
+  { id:"alphaevolve-kissing", f:"cv", rel:"earlier", date:"May 14, 2025", system:"Google DeepMind · AlphaEvolve (Gemini)", name:"593 kissing spheres in 11 dimensions", sig:6.4, diff:6.2,
+    claim:"A configuration of 593 non-overlapping unit spheres all touching a central unit sphere in 11 dimensions, improving the previously reported lower bound of 592. This establishes a lower bound, not the exact kissing number. It records the 2025 advance, not a claim that 593 is still the best bound today.",
+    why:"A new extremal construction in a well-studied geometric problem, but a one-sphere improvement in a single dimension, not a sphere-packing theorem comparable to Viazovska's exact eight-dimensional result.",
+    leanNote:"No Lean formalization is cited. The construction was evaluated computationally and its artifacts were released.",
+    reviewNote:"Reported in DeepMind's announcement and mathematical-results notebook. A construction certificate and an exact optimality proof are different kinds of evidence; the latter is not claimed here.",
+    papers:[{t:"AlphaEvolve: A coding agent for scientific and algorithmic discovery",u:"https://arxiv.org/abs/2506.13131"},{t:"Kissing-number construction and mathematical results",u:"https://github.com/google-deepmind/alphaevolve_results/blob/master/mathematical_results.ipynb"}],
+    press:[["DeepMind: AlphaEvolve","https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/"]] },
+  { id:"funsearch-capsets", f:"co", rel:"earlier", date:"Dec 14, 2023", system:"Google DeepMind · FunSearch", name:"New cap-set constructions", sig:7.0, diff:6.8, review:"support",
+    claim:"FunSearch discovered programs constructing large cap sets: subsets of finite vector spaces over the three-element field containing no three distinct points on an affine line. The work improved known constructions in the settings studied; it did not solve the general cap-set problem.",
+    why:"New lower-bound constructions in additive combinatorics and an early example of language-model-guided mathematical discovery. The improvement is meaningful, but narrower than a general theorem settling the problem. Human mathematicians helped interpret and steer the search.",
+    leanNote:"No Lean formalization is cited. Candidate constructions were checked by an automated evaluator; code and construction data are public.",
+    reviewNote:"Published in Nature. Publication is separate from a Lean proof, and does not turn these construction records into a proof of optimality.",
+    papers:[{t:"Mathematical discoveries from program search with large language models",u:"https://www.nature.com/articles/s41586-023-06924-6"},{t:"FunSearch code and cap-set constructions",u:"https://github.com/google-deepmind/funsearch"}],
+    press:[["DeepMind: FunSearch","https://deepmind.google/blog/funsearch-making-new-discoveries-in-mathematical-sciences-using-large-language-models/"]] },
+  { id:"alphatensor", f:"cs", rel:"earlier", date:"Oct 5, 2022", system:"Google DeepMind · AlphaTensor", name:"4×5 by 5×5 matrix multiplication in 76 products", sig:7.4, diff:7.4, review:"support",
+    claim:"AlphaTensor found a bilinear algorithm multiplying a 4×5 matrix by a 5×5 matrix in 76 scalar multiplications, compared with the cited previous construction's 80. This is a finite-size algorithmic improvement, not a proof that 76 is minimal or a solution of the general matrix-multiplication problem.",
+    why:"A new exact tensor decomposition after decades of human-designed algorithms, with broader methodological value. The score reflects mathematical novelty, not hardware benchmarking, and stays below major asymptotic complexity breakthroughs.",
+    leanNote:"No Lean formalization is cited. Tensor-decomposition identities provide algebraic correctness certificates; the repository includes algorithms and verification artifacts.",
+    reviewNote:"Published in Nature. This entry concerns the rectangular 76-product algorithm, not the separate binary-arithmetic record, and does not claim optimality.",
+    papers:[{t:"Discovering faster matrix multiplication algorithms with reinforcement learning",u:"https://www.nature.com/articles/s41586-022-05172-4"},{t:"AlphaTensor algorithms and artifacts",u:"https://github.com/google-deepmind/alphatensor"}],
+    press:[["DeepMind: Discovering novel algorithms with AlphaTensor","https://deepmind.google/blog/discovering-novel-algorithms-with-alphatensor/"]] },
 ];
 
 const SIG_ANCHORS = [
@@ -724,6 +775,7 @@ const CATS = {
     earlier:  { label: "Proved earlier by others", light: "#b993d8", dark: "#6d4691" },
     none:     { label: "No review yet",            ...GRAY } } },
   rel: { title: "Released", key: "rel", items: {
+    earlier: { label: "Before Sep 2026", ...GRAY },
     sep8:  { label: "Sep 8",  light: "#7fd27f", dark: "#2e7a3a" },
     oct6:  { label: "Oct 6",  light: "#8fa8dc", dark: "#3b528b" },
     oct26: { label: "Oct 26", light: "#f6dc4a", dark: "#7a6b10" } } },
@@ -942,8 +994,8 @@ function detailCard(r) {
   card.appendChild(band);
 
   const fams = r.fams || (/^\d{3}$/.test(r.id) ? [r.id] : []);
-  const famText = fams.length ? "Catalog " + fams.map((f) => "#" + f).join(", ") : "Not in the catalog";
-  const papers = fams.flatMap((f) => LINKS[f] || []);
+  const famText = fams.length ? "OpenAI catalog " + fams.map((f) => "#" + f).join(", ") : r.papers ? "" : "Not in the catalog";
+  const papers = [...fams.flatMap((f) => LINKS[f] || []), ...(r.papers || [])];
   const sibs = r.implied ? r.parent.subs : kidsOf(r.parent).filter((x) => !x.children);
   const at = sibs.indexOf(r);
   const prev = at > 0 ? sibs[at - 1] : null;
@@ -952,7 +1004,8 @@ function detailCard(r) {
   const by = r.implied ? byId.get(r.implied) : null;
 
   let h = `<div class="dscroll"><div class="dbody">
-    <p class="kicker">${esc(r.field.name)} · Released ${esc(RELEASES[r.rel])} · ${famText}</p>
+    <p class="kicker">${esc(r.field.name)} · Released ${esc(dateOf(r))}${famText ? " · " + famText : ""}</p>
+    <p class="kicker">${esc(systemOf(r))}</p>
     <h2 tabindex="-1">${fmt(r.name)}</h2>
     <div class="scores">
       <div class="sc"><div class="sc-k">Impact</div><div class="sc-v">${fa(r.impact)}</div>
@@ -962,7 +1015,7 @@ function detailCard(r) {
     </div>
     <h3>What it claims</h3><p>${fmt(r.claim)}</p>
     <h3>Why these scores</h3><p>${fmt(r.why)}</p>`;
-  if (by) h += `<h3>Implied by a newer result</h3><p><a href="${hashOf(by)}">${fmt(by.name)}</a> (released ${esc(RELEASES[by.rel])}) proves everything this does. This result is drawn inside its tile, and its Impact isn't counted again in totals.</p>`;
+  if (by) h += `<h3>Implied by a newer result</h3><p><a href="${hashOf(by)}">${fmt(by.name)}</a> (released ${esc(dateOf(by))}) proves everything this does. This result is drawn inside its tile, and its Impact isn't counted again in totals.</p>`;
   if (covers.length) h += `<h3>Also covers</h3><p>${covers.map((c) => `<a href="${hashOf(c)}">${fmt(c.name)}</a>`).join(" and ")}, both released Oct 6. They're drawn inside this tile at their own size, and the rest of the tile is what's new here.</p>`;
   h += `<div class="facts">
       <div><h3>Lean proof</h3><p>${badge("lean", r.lean)}${r.leanNote ? fmt(r.leanNote) : r.lean === "none" ? "Not formalized." : ""}</p></div>
@@ -1015,7 +1068,7 @@ function buildLayer(node) {
     const n = c.node;
     t.setAttribute("aria-label", n.children
       ? `${n.name}, ${leavesOf(n).length} results. Zoom in.`
-      : `${plain(n.name)}. Impact ${fa(n.impact)}, Difficulty ${fa(n.dabs)}. Open details.`);
+      : `${plain(n.name)}. ${systemOf(n)}. Impact ${fa(n.impact)}, Difficulty ${fa(n.dabs)}. Open details.`);
     t.addEventListener("click", () => go(n));
     t.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(n); }
@@ -1247,7 +1300,7 @@ mapEl.addEventListener("pointermove", (e) => {
     tip.innerHTML = `<b>${esc(a.full)}</b><span class="m">Human result, for scale</span><br>
       Impact ${fa(impactOf(a.sig))} · Difficulty ${fa(impactOf(a.diff))}`;
   } else if (r) {
-    tip.innerHTML = `<b>${fmt(r.name)}</b><span class="m">${esc(r.field.name)} · ${esc(RELEASES[r.rel])}${r.implied ? " · inside " + esc(r.parent.name) : ""}</span><br>
+    tip.innerHTML = `<b>${fmt(r.name)}</b><span class="m">${esc(r.field.name)} · ${esc(dateOf(r))} · ${esc(systemOf(r))}${r.implied ? " · inside " + esc(r.parent.name) : ""}</span><br>
       Impact ${fa(r.impact)} · Difficulty ${fa(r.dabs)}<br>
       <span class="m">Lean: ${esc(CATS.lean.items[r.lean].label)} · ${esc(CATS.review.items[r.review].label)}</span>`;
   } else {
