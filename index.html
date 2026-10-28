@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mathrank</title>
+<title>meowc.at/mathrank - Ranking LLM math discoveries</title>
 <meta name="description" content="Mathematical discoveries and claims made with large language models, sized by Impact and colored by Difficulty in a zoomable treemap.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='18' height='30' rx='3' fill='%233b528b'/%3E%3Crect x='21' y='1' width='10' height='17' rx='3' fill='%2321918c'/%3E%3Crect x='21' y='20' width='10' height='11' rx='3' fill='%23fde725'/%3E%3C/svg%3E">
 <style>
@@ -25,8 +25,10 @@ html{background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans);-webkit-text-size-adjust:100%}
 .wrap{max-width:1180px;margin:0 auto;padding:0 16px}
 a{color:var(--accent);text-underline-offset:2px}
-header.site{padding:34px 0 6px}
-h1{font:600 42px/1.05 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
+header.site{padding:20px 0 6px}
+.home{display:flex;align-items:center;justify-content:center;width:38px;height:38px;margin:0 0 16px;border-radius:8px;background:var(--chip);color:var(--fg)}
+.home:hover{background:var(--line)}
+.home:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
 .lede{font-size:18px;margin:0 0 6px}
 .meta{color:var(--muted);font-size:14px;margin:0}
 
@@ -135,7 +137,6 @@ footer.site{color:var(--muted);font-size:13px;padding:30px 0 44px}
 noscript p{background:var(--card);padding:16px;border-radius:8px}
 
 @media (max-width:700px){
-  h1{font-size:34px}
   .lede{font-size:17px}
   .crumbs .stat{margin-left:0;width:100%}
   .scores{gap:6px}
@@ -156,7 +157,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
 <body>
 <header class="site">
   <div class="wrap">
-    <h1>Mathrank</h1>
+    <a class="home" href="https://meowc.at/" aria-label="meowc.at home" title="meowc.at"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 8.5V20h13V8.5"/><path d="M10 20v-6h4v6"/></svg></a>
     <p class="lede">Selected mathematical discoveries and claims made with large language models, from OpenAI, Claude, AxiomProver and Google DeepMind, sized by how much they would matter if they hold up.</p>
     <p class="meta"><span id="count">67</span> results · 2023–2026 · scores as of October 28, 2026 · <a href="#how">How the scores work</a></p>
   </div>
