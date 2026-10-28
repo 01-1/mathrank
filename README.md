@@ -1,8 +1,8 @@
 # Mathrank
 
-A zoomable treemap of selected AI-assisted mathematical discoveries and claims from 2022–2026, across OpenAI, Claude, AxiomProver, and Google DeepMind's AlphaTensor, FunSearch, and AlphaEvolve. It includes unreviewed claims as well as published results, with their scope and verification evidence kept explicit.
+A zoomable treemap of selected mathematical discoveries and claims made with large language models from 2023–2026, across OpenAI, Claude, AxiomProver, and Google DeepMind's FunSearch and AlphaEvolve. It includes unreviewed claims as well as published results, with their scope and verification evidence kept explicit.
 
-The collection includes the reported Jacobian counterexample in dimensions ≥ 3 (not the plane case), Fel's conjecture, finite matrix-multiplication algorithms, cap-set constructions, and an eleven-dimensional kissing-number lower bound. It is curated, not exhaustive; historical records are not necessarily today's best bounds.
+The collection includes the Jacobian counterexample in dimensions ≥ 3 (not the plane case), Fel's conjecture, a 4×4 complex matrix-multiplication algorithm, cap-set constructions, and an eleven-dimensional kissing-number lower bound. It is curated, not exhaustive; historical records are not necessarily today's best bounds.
 
 - **Tile area** is Impact by default: how much a result would matter if it holds up. It can also be sized by Difficulty, or with every tile equal.
 - **Color** shows Difficulty or Impact in 5 steps (by default whichever one isn't setting the size), or Lean proof status, review status, or release cohort. Earlier discoveries share a neutral cohort; detail cards and tooltips show exact dates and AI attribution.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mathrank</title>
-<meta name="description" content="AI-assisted mathematical discoveries and claims across systems, sized by Impact and colored by Difficulty in a zoomable treemap.">
+<meta name="description" content="Mathematical discoveries and claims made with large language models, sized by Impact and colored by Difficulty in a zoomable treemap.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='18' height='30' rx='3' fill='%233b528b'/%3E%3Crect x='21' y='1' width='10' height='17' rx='3' fill='%2321918c'/%3E%3Crect x='21' y='20' width='10' height='11' rx='3' fill='%23fde725'/%3E%3C/svg%3E">
 <style>
 *{box-sizing:border-box}
@@ -157,8 +157,8 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
 <header class="site">
   <div class="wrap">
     <h1>Mathrank</h1>
-    <p class="lede">Selected mathematical discoveries and claims made with AI, from OpenAI, Claude, AxiomProver and Google DeepMind, sized by how much they would matter if they hold up.</p>
-    <p class="meta"><span id="count">68</span> results · 2022–2026 · scores as of October 27, 2026 · <a href="#how">How the scores work</a></p>
+    <p class="lede">Selected mathematical discoveries and claims made with large language models, from OpenAI, Claude, AxiomProver and Google DeepMind, sized by how much they would matter if they hold up.</p>
+    <p class="meta"><span id="count">67</span> results · 2023–2026 · scores as of October 28, 2026 · <a href="#how">How the scores work</a></p>
   </div>
 </header>
 
@@ -229,10 +229,10 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
   <section class="sources" id="sources">
     <h2>Sources</h2>
     <ul>
-      <li><a href="https://jacobianconjectures.com/">Jacobian counterexample project</a>, <a href="https://jacobianfun.org/jacobian-explained">Gallagher's explainer</a> and <a href="https://github.com/alerad/alpoge-lean">Lean formalization</a>: the higher-dimensional claim, attribution and verification artifacts</li>
+      <li><a href="https://jacobianconjectures.com/">Jacobian counterexample project</a>, <a href="https://jacobianfun.org/jacobian-explained">Gallagher's explainer</a>, <a href="https://github.com/alerad/alpoge-lean">Lean formalization</a> and <a href="https://arxiv.org/abs/2609.17795">van den Essen's elementary derivation</a></li>
       <li><a href="https://arxiv.org/abs/2602.03716">Fel's conjecture paper</a> and <a href="https://axiommath.ai/research/proof-of-concept/">Axiom Math's account</a></li>
       <li><a href="https://arxiv.org/abs/2506.13131">AlphaEvolve paper</a>: matrix multiplication and geometric constructions</li>
-      <li><a href="https://www.nature.com/articles/s41586-023-06924-6">FunSearch (Nature)</a> and <a href="https://www.nature.com/articles/s41586-022-05172-4">AlphaTensor (Nature)</a>: program search and reinforcement-learning discoveries</li>
+      <li><a href="https://www.nature.com/articles/s41586-023-06924-6">FunSearch (Nature)</a>: cap-set constructions from LLM-guided program search</li>
       <li><a href="https://github.com/openai/math">openai/math</a>: the catalog, papers, Lean scope notes and release history</li>
       <li><a href="https://openai.com/index/building-scientific-understanding-with-academic-communities/">OpenAI: Working with academic communities</a> (Oct 26)</li>
       <li><a href="https://openai.com/index/sharing-ai-progress-in-mathematics/">OpenAI: Sharing AI progress in mathematics</a> (Oct 6)</li>
@@ -545,12 +545,12 @@ const RESULTS = [
     why:"Mumford and Shah's 1989 conjecture." },
 
   // Cross-system discoveries; exact dates are separate from release-color cohorts.
-  { id:"jacobian", f:"ag", rel:"earlier", date:"Jul 19, 2026", system:"Claude Fable · Levent Alpöge", name:"Jacobian counterexample in dimensions ≥ 3", sig:9.2, diff:8.8, lean:"full",
-    claim:"A reported polynomial map ℂ³ → ℂ³ has constant Jacobian determinant −2 but sends three distinct points to the same point. Appending unchanged coordinates extends the counterexample to every dimension ≥ 3. This does not settle the two-dimensional Jacobian conjecture.",
-    why:"A counterexample to the higher-dimensional form of a central conjecture dating to 1939 would reshape polynomial-map theory. The remaining plane case limits its scope. The difficulty reflects decades of work, not the length of the explicit certificate. Scores are conditional on the reported result.",
-    leanNote:"A separate Lean/Mathlib repository reports a complete formalization of the counterexample, with no sorry or additional axioms. This site's listing is not an audit of the formal statement or build.",
-    reviewNote:"The project and Gallagher's explainer report exact determinant and collision checks. The displayed identities were also checked with exact symbolic algebra for this listing; independent expert review or journal acceptance is not established by these sources.",
-    papers:[{t:"Counterexample and verification project",u:"https://jacobianconjectures.com/"},{t:"Lean formalization of Alpöge's counterexample",u:"https://github.com/alerad/alpoge-lean"}],
+  { id:"jacobian", f:"ag", rel:"earlier", date:"Jul 19, 2026", system:"Claude Fable · Levent Alpöge", name:"Jacobian counterexample in dimensions ≥ 3", sig:9.2, diff:7.4, lean:"full", review:"support",
+    claim:"An explicit polynomial map ℂ³ → ℂ³, with coordinates of degree 7, 6 and 4, has constant Jacobian determinant −2 but sends three distinct points to the same point. Appending unchanged coordinates extends the counterexample to every dimension ≥ 3. This does not settle the two-dimensional Jacobian conjecture.",
+    why:"A counterexample to the higher-dimensional form of a central conjecture dating to 1939 would reshape polynomial-map theory. The remaining plane case limits its scope. Difficulty is lower because the answer turned out to be elementary: the conjecture held out for 87 years, but the counterexample is a small explicit map that anyone can check with computer algebra. Within weeks others had built whole families of counterexamples, and van den Essen showed the same map can be found by elementary mathematics.",
+    leanNote:"A separate Lean/Mathlib repository formalizes the counterexample, with no sorry or additional axioms.",
+    reviewNote:"The determinant and the three-point collision are exact identities, easy to check with any computer algebra system. Arno van den Essen, a longtime expert on the conjecture, rederived the same map, and other papers have extended it to new counterexamples.",
+    papers:[{t:"Counterexample and verification project",u:"https://jacobianconjectures.com/"},{t:"Lean formalization of Alpöge's counterexample",u:"https://github.com/alerad/alpoge-lean"},{t:"van den Essen: An elementary way to find a counterexample to the Jacobian Conjecture",u:"https://arxiv.org/abs/2609.17795"},{t:"Gao: Counterexamples to the Jacobian conjecture in dimensions greater than two",u:"https://arxiv.org/abs/2608.00222"}],
     press:[["Gallagher: The Jacobian counterexample, explained","https://jacobianfun.org/jacobian-explained"]] },
   { id:"fel", f:"al", rel:"earlier", date:"Feb 3, 2026", system:"Axiom Math · AxiomProver", name:"Fel's conjecture on numerical semigroups", sig:6.8, diff:6.5, lean:"full",
     claim:"A formula for normalized alternating syzygy power sums of numerical semigroups, for every integer p ≥ 0, in terms of gap power sums and universal symmetric polynomials. The authors report a proof generated by AxiomProver and fully formalized in Lean/Mathlib.",
@@ -580,13 +580,6 @@ const RESULTS = [
     reviewNote:"Published in Nature. Publication is separate from a Lean proof, and does not turn these construction records into a proof of optimality.",
     papers:[{t:"Mathematical discoveries from program search with large language models",u:"https://www.nature.com/articles/s41586-023-06924-6"},{t:"FunSearch code and cap-set constructions",u:"https://github.com/google-deepmind/funsearch"}],
     press:[["DeepMind: FunSearch","https://deepmind.google/blog/funsearch-making-new-discoveries-in-mathematical-sciences-using-large-language-models/"]] },
-  { id:"alphatensor", f:"cs", rel:"earlier", date:"Oct 5, 2022", system:"Google DeepMind · AlphaTensor", name:"4×5 by 5×5 matrix multiplication in 76 products", sig:7.4, diff:7.4, review:"support",
-    claim:"AlphaTensor found a bilinear algorithm multiplying a 4×5 matrix by a 5×5 matrix in 76 scalar multiplications, compared with the cited previous construction's 80. This is a finite-size algorithmic improvement, not a proof that 76 is minimal or a solution of the general matrix-multiplication problem.",
-    why:"A new exact tensor decomposition after decades of human-designed algorithms, with broader methodological value. The score reflects mathematical novelty, not hardware benchmarking, and stays below major asymptotic complexity breakthroughs.",
-    leanNote:"No Lean formalization is cited. Tensor-decomposition identities provide algebraic correctness certificates; the repository includes algorithms and verification artifacts.",
-    reviewNote:"Published in Nature. This entry concerns the rectangular 76-product algorithm, not the separate binary-arithmetic record, and does not claim optimality.",
-    papers:[{t:"Discovering faster matrix multiplication algorithms with reinforcement learning",u:"https://www.nature.com/articles/s41586-022-05172-4"},{t:"AlphaTensor algorithms and artifacts",u:"https://github.com/google-deepmind/alphatensor"}],
-    press:[["DeepMind: Discovering novel algorithms with AlphaTensor","https://deepmind.google/blog/discovering-novel-algorithms-with-alphatensor/"]] },
 ];
 
 const SIG_ANCHORS = [
