@@ -165,6 +165,13 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
 
 <main class="wrap">
   <div class="controls" id="controls">
+    <div class="ctl"><span class="ctl-l" id="size-l">Size</span>
+      <div class="seg" role="radiogroup" aria-labelledby="size-l" data-key="size">
+        <button type="button" role="radio" data-v="impact">Impact</button>
+        <button type="button" role="radio" data-v="diff">Difficulty</button>
+        <button type="button" role="radio" data-v="equal">Equal</button>
+      </div>
+    </div>
     <div class="ctl"><span class="ctl-l" id="color-l">Color</span>
       <div class="seg" role="radiogroup" aria-labelledby="color-l" data-key="color">
         <button type="button" role="radio" data-v="diff">Difficulty</button>
@@ -172,13 +179,6 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
         <button type="button" role="radio" data-v="lean">Lean proof</button>
         <button type="button" role="radio" data-v="review">Review</button>
         <button type="button" role="radio" data-v="rel">Release</button>
-      </div>
-    </div>
-    <div class="ctl"><span class="ctl-l" id="size-l">Size</span>
-      <div class="seg" role="radiogroup" aria-labelledby="size-l" data-key="size">
-        <button type="button" role="radio" data-v="impact">Impact</button>
-        <button type="button" role="radio" data-v="diff">Difficulty</button>
-        <button type="button" role="radio" data-v="equal">Equal</button>
       </div>
     </div>
     <label class="chk"><input type="checkbox" id="refs-toggle"> Show RH and Fermat/Poincaré for scale</label>
