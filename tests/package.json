@@ -1,0 +1,11 @@
+{
+  "name": "mathrank-tests",
+  "private": true,
+  "description": "Tests that load index.html in jsdom and click through it",
+  "scripts": {
+    "test": "node treemap.test.js && node results.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "24.1.3"
+  }
+}

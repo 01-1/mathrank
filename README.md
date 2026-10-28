@@ -15,6 +15,16 @@ The collection includes the Jacobian counterexample in dimensions ≥ 3 (not the
 
 The whole site is `index.html`. There's no build step and it makes no external requests, so you can serve it from any static host or open it straight from disk.
 
+## Tests
+
+The tests in `tests/` load `index.html` in [jsdom](https://github.com/jsdom/jsdom) and click through it: zooming, the size and color controls, nested results, true-scale references, routes, and every detail card. They need Node.js:
+
+```sh
+cd tests
+npm install
+npm test
+```
+
 ## Editing
 
 All the data lives in `index.html`:
