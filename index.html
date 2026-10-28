@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>meowc.at/mathrank - Ranking LLM math discoveries</title>
-<meta name="description" content="Mathematical discoveries and claims made with large language models, sized by Impact and colored by Difficulty in a zoomable treemap.">
+<meta name="description" content="Mathematical discoveries and claims made with large language models, sized and colored by Difficulty in a zoomable treemap.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='18' height='30' rx='3' fill='%233b528b'/%3E%3Crect x='21' y='1' width='10' height='17' rx='3' fill='%2321918c'/%3E%3Crect x='21' y='20' width='10' height='11' rx='3' fill='%23fde725'/%3E%3C/svg%3E">
 <style>
 *{box-sizing:border-box}
@@ -26,7 +26,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans);-w
 .wrap{max-width:1180px;margin:0 auto;padding:0 16px}
 a{color:var(--accent);text-underline-offset:2px}
 header.site{padding:12px 0 6px}
-.home{display:flex;align-items:center;gap:6px;width:max-content;height:32px;padding:0 12px 0 9px;margin:0 0 8px;border-radius:8px;background:var(--chip);color:var(--fg);font:500 14px var(--sans);text-decoration:none}
+.home{display:flex;align-items:center;gap:6px;width:max-content;height:32px;padding:0 12px 0 9px;margin:0 0 14px;border-radius:8px;background:var(--chip);color:var(--fg);font:500 14px var(--sans);text-decoration:none}
 .home:hover{background:var(--line)}
 .home:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
 .lede{font-size:18px;margin:0 0 6px}
@@ -158,7 +158,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
 <header class="site">
   <div class="wrap">
     <a class="home" href="https://meowc.at/"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 8.5V20h13V8.5"/><path d="M10 20v-6h4v6"/></svg>meowc.at</a>
-    <p class="lede">Selected mathematical discoveries and claims made with large language models, from OpenAI, Claude, AxiomProver and Google DeepMind, sized by how much they would matter if they hold up.</p>
+    <p class="lede">Selected mathematical discoveries and claims made with large language models, from OpenAI, Claude, AxiomProver and Google DeepMind, sized by how hard the problems were for people.</p>
     <p class="meta"><span id="count">67</span> results · 2023–2026 · scores as of October 28, 2026 · <a href="#how">How the scores work</a></p>
   </div>
 </header>
@@ -200,7 +200,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
     <div class="grid2">
       <div class="block">
         <h3>Impact</h3>
-        <p>How much the result would matter. <strong>Tile area is proportional to Impact</strong> unless you size by Difficulty or give every result equal area. Impact can be added up, without counting implied results twice.</p>
+        <p>How much the result would matter. Size by Impact to make tile area proportional to it. Impact can be added up, without counting implied results twice.</p>
         <p>The dashed tiles marked “For scale” are human results drawn at the same scale: the Riemann Hypothesis, and Fermat and Poincaré.</p>
         <table class="anchors">
           <thead><tr><th>Human result, for scale</th><th class="num">Impact</th></tr></thead>
@@ -209,7 +209,7 @@ noscript p{background:var(--card);padding:16px;border-radius:8px}
       </div>
       <div class="block">
         <h3>Difficulty</h3>
-        <p>How hard the problem was for people: how long it held out, how much expert effort went into it, and whether it needed new ideas. Proof length doesn't count. 10 is the Riemann Hypothesis, which is still unsolved.</p>
+        <p>How hard the problem was for people: how long it held out, how much expert effort went into it, and whether it needed new ideas. Proof length doesn't count. 10 is the Riemann Hypothesis, which is still unsolved. <strong>Tile area is proportional to Difficulty</strong> unless you size by Impact or give every result equal area.</p>
         <table class="anchors">
           <thead><tr><th>Human result, for scale</th><th class="num">Difficulty</th></tr></thead>
           <tbody id="diff-anchors"></tbody>
@@ -654,15 +654,15 @@ const store = {
 
 const state = {
   color: store.get("color", "diff"),
-  size: store.get("size", "impact"),
+  size: store.get("size", "diff"),
   refs: store.get("refs", "1") === "1",
 };
 if (!["diff", "impact", "lean", "review", "rel"].includes(state.color)) state.color = "diff";
-if (!["impact", "diff", "equal"].includes(state.size)) state.size = "impact";
-/* When the size changes, color defaults to the other score (Impact size gets Difficulty color and
-   vice versa). Picking the same score for both afterwards is still allowed. */
+if (!["impact", "diff", "equal"].includes(state.size)) state.size = "diff";
+/* When the size changes, a score color follows it (Difficulty size gets Difficulty color, and
+   likewise for Impact). Picking a different color afterwards is still allowed. */
 function fixColor() {
-  if (state.color === state.size) state.color = state.size === "impact" ? "diff" : "impact";
+  if ((state.color === "impact" || state.color === "diff") && state.size !== "equal") state.color = state.size;
 }
 
 /* Tile weight under the current sizing. Difficulty uses the same curve as Impact. */
@@ -875,17 +875,17 @@ function leafTile(r, rect, big) {
   // Results this one implies are drawn inside it at their own true size; its area includes theirs,
   // and the rest of the tile is what's new in this result. The label goes in that leftover part:
   // a band across the top, or a column on the left when the band would be too thin to read.
-  let lw = rect.w, lh0 = rect.h;
+  let lw = rect.w, lh0 = rect.h, band = false;
   const p = r.subs ? r.subs.reduce((s, x) => s + x.value, 0) / r.value : 0;
   const need = (big ? 12.5 : 11.5) * 1.18 + 2 * (big ? 8 : 5) - 2;  // one line of the parent's name
-  const room = (1 - p) * rect.h >= need || (1 - p) * rect.w >= 120;
-  // Only split the tile when the parent's own name still fits; otherwise draw it whole.
-  if (r.subs && room && rect.w >= (big ? 120 : 150) && rect.h >= (big ? 64 : 80)) {
+  // Split whenever the tile is big enough to show its parts. A band too thin for the usual label
+  // gets a single tighter line below.
+  if (r.subs && rect.w >= (big ? 120 : 100) && rect.h >= (big ? 64 : 48)) {
     const top = (1 - p) * rect.h >= Math.max(need, 30) || (1 - p) * rect.w < 120;
     const nest = top
       ? { x: 0, y: rect.h * (1 - p), w: rect.w, h: rect.h * p }
       : { x: rect.w * (1 - p), y: 0, w: rect.w * p, h: rect.h };
-    if (top) lh0 = nest.y; else lw = nest.x;
+    if (top) { lh0 = nest.y; band = true; } else lw = nest.x;
     const kids = [...r.subs].sort((a, b) => b.value - a.value);
     for (const c of squarify(kids, nest.x, nest.y, nest.w, nest.h)) {
       const st = leafTile(c.node, inset(c, 1.5), false);
@@ -895,20 +895,24 @@ function leafTile(r, rect, big) {
   }
 
   const pad = big ? 8 : 5;
+  const tight = band && lh0 < need;
+  const vp = tight ? 1 : pad;  // vertical padding
+  if (tight) t.style.paddingTop = vp + "px";
   const avail = lw - 2 * pad;
   let fs = big ? clamp(Math.sqrt(lw * lh0) / 10.5, 12.5, 22) : 11.5;
+  if (tight) fs = Math.min(fs, (lh0 - 2 * vp) / 1.18);
   const minFs = big ? 11 : 9.5;
   // Shrink rather than split words mid-way; tiny tiles go unlabeled (the tooltip still names them).
   while (fs > minFs && longestPiece(r.name, fs) > avail) fs -= 0.5;
-  if (!big && longestPiece(r.name, fs) > avail) return t;
+  if (fs < 8.5 || (!big && longestPiece(r.name, fs) > avail)) return t;
   const lh = fs * 1.18;
-  if (lw < (big ? 52 : 40) || lh0 < lh + 2 * pad - 2) return t;
+  if (lw < (big ? 52 : 40) || lh0 < lh + 2 * vp - 2) return t;
   const lbl = el("div", "lbl");
   lbl.style.maxWidth = avail + "px";
   let subs = big ? scoreLines(r, avail) : [];
   const subH = (n) => (n ? n * 16 + 3 : 0);
-  if (subs.length && lh0 - 2 * pad - subH(subs.length) < lh) subs = [];
-  const lines = Math.max(1, Math.floor((lh0 - 2 * pad - subH(subs.length)) / lh));
+  if (subs.length && lh0 - 2 * vp - subH(subs.length) < lh) subs = [];
+  const lines = Math.max(1, Math.floor((lh0 - 2 * vp - subH(subs.length)) / lh));
   const nm = el("div", "nm", fmt(r.name));
   nm.style.fontSize = fs + "px";
   nm.style.webkitLineClamp = String(lines);

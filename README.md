@@ -4,8 +4,8 @@ A zoomable treemap of selected mathematical discoveries and claims made with lar
 
 The collection includes the Jacobian counterexample in dimensions ≥ 3 (not the plane case), Fel's conjecture, a 4×4 complex matrix-multiplication algorithm, cap-set constructions, and an eleven-dimensional kissing-number lower bound. It is curated, not exhaustive; historical records are not necessarily today's best bounds.
 
-- **Tile area** is Impact by default: how much a result would matter if it holds up. It can also be sized by Difficulty, or with every tile equal.
-- **Color** shows Difficulty or Impact in 5 steps (by default whichever one isn't setting the size), or Lean proof status, review status, or release cohort. Earlier discoveries share a neutral cohort; detail cards and tooltips show exact dates and AI attribution.
+- **Tile area** is Difficulty by default: how hard the problem was for people. It can also be sized by Impact (how much a result would matter if it holds up), or with every tile equal.
+- **Color** shows Difficulty or Impact in 5 steps (by default the same one that sets the size), or Lean proof status, review status, or release cohort. Earlier discoveries share a neutral cohort; detail cards and tooltips show exact dates and AI attribution.
 - **For scale**: dashed tiles beside the map show the Riemann Hypothesis and Fermat/Poincaré at the same scale. A checkbox hides them.
 - **Nested results**: the Oct 26 local smoothing result implies two Oct 6 results, so they're drawn inside its tile at their own size. The rest of its tile is what's new, and they aren't counted twice.
 - **Click a tile** to zoom into it. Use Back, the path above the map, or Esc to zoom out.
